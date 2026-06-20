@@ -119,7 +119,6 @@ export function StatusFlowPage() {
             <p className="note" style={{ lineHeight: 1.6 }}>① <b>Sampling trigger</b> for the verification lane (e.g. always High-priority / &gt;20% items + random X% of the rest). ② <b>Authority:</b> on mismatch, SPV result supersedes the officer's. ③ <b>Config, not constants:</b> decision-matrix bands and the 20% verification sample are editable per category. ④ Mismatch-generated changes get a recommended 2nd-person check (AM / Ops Quality).</p>
           </div>
         </div>
-        <p className="note mt16">Corrected lifecycle · PRD #21–37 + Appendix 2 &amp; 6</p>
       </div>
     </section>
   )
