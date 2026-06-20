@@ -1,6 +1,36 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Topbar } from '../../components/Topbar'
+import { fetchDashboardKpis, fetchHubProgress, fetchHubs } from '../../data/queries'
+
+const LIFECYCLE_STEPS = [
+  { key: 'SUBMITTED', label: 'Submitted', bg: 'var(--mainFaded)', border: '#cfe0f5' },
+  { key: 'COMPLETED', label: 'Completed · no change', bg: 'var(--tag-green-bg)', border: '#bce7bd' },
+  { key: 'PENDING_SORT', label: 'Sorting 1:1 (6–20%)', bg: 'var(--tag-orange-bg)', border: '#ffd9bd' },
+  { key: 'PENDING_APPROVAL', label: 'Pending approval', bg: 'var(--tag-yellow-bg)', border: '#ffe08a' },
+  { key: 'APPROVED', label: 'Approved → WMS', bg: '#E8EFFB', border: '#cfe0f5' },
+  { key: 'REJECTED', label: 'Rejected', bg: 'var(--tag-red-bg)', border: '#ffc7d2' },
+  { key: 'RE_INSPECTED', label: 'Verification done', bg: '#F0EDF8', border: '#d8cef0' },
+]
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+  const [period, setPeriod] = useState('This Week')
+
+  const { data: kpis, isLoading } = useQuery({
+    queryKey: ['dashboard_kpis'],
+    queryFn: fetchDashboardKpis,
+    refetchInterval: 5 * 60 * 1000,
+  })
+  const { data: hubs = [] } = useQuery({ queryKey: ['hubs'], queryFn: fetchHubs })
+  const hubIds = hubs.map(h => h.id)
+  const { data: hubProgress = {} } = useQuery({
+    queryKey: ['hub_progress', hubIds],
+    queryFn: () => fetchHubProgress(hubIds),
+    enabled: hubIds.length > 0,
+  })
+
   return (
     <section className="admin active" id="adm-dashboard">
       <Topbar title="Monitoring Dashboard" />
@@ -8,59 +38,51 @@ export function DashboardPage() {
         <div className="between" style={{ marginBottom: 20 }}>
           <div>
             <h1 className="h1">Monitoring Dashboard</h1>
-            <p className="sub mb0">Real-time inspection progress across hubs · auto-refresh ≤ 5 min</p>
+            <p className="sub mb0">Real-time inspection progress across hubs · auto-refresh every 5 min</p>
           </div>
           <div className="row">
-            <select className="inp"><option>This Week</option><option>Today</option><option>This Month</option></select>
+            <select className="inp" value={period} onChange={e => setPeriod(e.target.value)}>
+              <option>This Week</option><option>Today</option><option>This Month</option>
+            </select>
             <button className="btn btn-outline">⬇ Export CSV/Excel</button>
-          </div>
-        </div>
-
-        <div className="alert info" style={{ marginBottom: 24 }}>
-          <span className="ic">ℹ️</span>
-          <div>
-            <b>M0 scaffold complete.</b> Dashboard data will populate in M6 after inspections flow through the system.
-            Add tasks (M2), run inspections (M3), approve (M4), and verify (M5) — then come back here.
           </div>
         </div>
 
         <div className="kpis">
           <div className="kpi">
-            <div className="v">—</div>
+            <div className="v" style={{ color: (kpis?.covPct ?? 0) >= 95 ? 'var(--success)' : 'var(--red)' }}>{isLoading ? '—' : `${kpis?.covPct ?? 0}%`}</div>
             <div className="l">Sampling coverage compliance</div>
-            <div className="d" style={{ color: 'var(--secondaryText)' }}>target &gt; 95%</div>
+            <div className="d" style={{ color: (kpis?.covPct ?? 0) >= 95 ? 'var(--success)' : 'var(--red)' }}>target &gt; 95%</div>
           </div>
           <div className="kpi">
-            <div className="v">—</div>
+            <div className="v">{isLoading ? '—' : kpis?.inspectionsToday ?? 0}</div>
             <div className="l">Inspections today</div>
-            <div className="d" style={{ color: 'var(--secondaryText)' }}>across hubs</div>
+            <div className="d" style={{ color: 'var(--secondaryText)' }}>across {hubs.length} hubs</div>
           </div>
           <div className="kpi">
-            <div className="v">—</div>
+            <div className="v" style={{ color: (kpis?.overSla ?? 0) > 0 ? 'var(--red)' : undefined }}>{isLoading ? '—' : kpis?.pendingApprovals ?? 0}</div>
             <div className="l">Pending WIMS approvals</div>
-            <div className="d" style={{ color: 'var(--secondaryText)' }}>SLA &gt; 15 min</div>
+            <div className="d" style={{ color: (kpis?.overSla ?? 0) > 0 ? 'var(--red)' : 'var(--secondaryText)' }}>
+              {isLoading ? '—' : `${kpis?.overSla ?? 0} over SLA (>15 min)`}
+            </div>
           </div>
           <div className="kpi">
-            <div className="v">—</div>
+            <div className="v" style={{ color: (kpis?.avgCompliance ?? 0) >= 95 ? 'var(--success)' : 'var(--red)' }}>{isLoading ? '—' : `${kpis?.avgCompliance ?? 0}%`}</div>
             <div className="l">SPV verification compliance</div>
-            <div className="d" style={{ color: 'var(--secondaryText)' }}>PASSED band</div>
+            <div className="d" style={{ color: (kpis?.avgCompliance ?? 0) >= 95 ? 'var(--success)' : 'var(--red)' }}>
+              {(kpis?.avgCompliance ?? 0) >= 95 ? 'PASSED band' : 'Below target'}
+            </div>
           </div>
         </div>
 
-        <h3 className="section-title">Inspection lifecycle — this week</h3>
+        <div className="between" style={{ marginBottom: 12 }}>
+          <h3 className="section-title mb0">Inspection lifecycle — {period.toLowerCase()}</h3>
+          <button className="btn btn-naked" onClick={() => navigate('/app/flow')}>View full flow →</button>
+        </div>
         <div className="lifeflow">
-          {[
-            { label: 'Submitted', color: 'var(--mainFaded)', border: '#cfe0f5' },
-            { label: 'Completed · no change', color: 'var(--tag-green-bg)', border: '#bce7bd' },
-            { label: 'Sorting 1:1 (6–20%)', color: 'var(--tag-orange-bg)', border: '#ffd9bd' },
-            { label: 'Pending approval', color: 'var(--tag-yellow-bg)', border: '#ffe08a' },
-            { label: 'Approved → WMS', color: '#E8EFFB', border: '#cfe0f5' },
-            { label: 'Rejected', color: 'var(--tag-red-bg)', border: '#ffc7d2' },
-            { label: 'In verification', color: 'var(--tag-grey-bg)', border: '#e2e6ee' },
-            { label: 'Mismatch → approval', color: '#F0EDF8', border: '#d8cef0' },
-          ].map(s => (
-            <div key={s.label} className="lifestep" style={{ background: s.color, borderColor: s.border }}>
-              <div className="n">—</div>
+          {LIFECYCLE_STEPS.map(s => (
+            <div key={s.key} className="lifestep" style={{ background: s.bg, borderColor: s.border }}>
+              <div className="n">{isLoading ? '—' : kpis?.lifecycle?.[s.key] ?? 0}</div>
               <div className="t">{s.label}</div>
             </div>
           ))}
@@ -68,24 +90,59 @@ export function DashboardPage() {
 
         <h3 className="section-title">Per-hub progress</h3>
         <div className="hubgrid">
-          {['Hub Kemang', 'Hub Tebet', 'Hub Pancoran'].map(name => (
-            <div key={name} className="hubcard">
-              <div className="between">
-                <div>
-                  <h4>{name}</h4>
-                  <div className="loc">South Jakarta</div>
-                </div>
-                <span className="lab grey">No data yet</span>
-              </div>
-              <div className="bar"><i style={{ width: '0%' }} /></div>
-              <div className="statline">
-                <span><span className="dot" style={{ background: 'var(--secondaryText)' }} />Pending —</span>
-                <span><span className="dot" style={{ background: 'var(--mainV2)' }} />In Progress —</span>
-                <span><span className="dot" style={{ background: 'var(--success)' }} />Done —</span>
-              </div>
+          {hubs.length === 0 && !isLoading && (
+            <div style={{ gridColumn: '1/-1', color: 'var(--secondaryText)', fontSize: 13, textAlign: 'center', padding: 20 }}>
+              No hub data yet — run the schema seed in Supabase
             </div>
-          ))}
+          )}
+          {hubs.map(hub => {
+            const p = hubProgress[hub.id] ?? { pending: 0, inProgress: 0, done: 0 }
+            const total = p.pending + p.inProgress + p.done
+            const pct = total > 0 ? Math.round(p.done / total * 100) : 0
+            return (
+              <div key={hub.id} className="hubcard">
+                <div className="between">
+                  <div><h4>{hub.name}</h4><div className="loc">{hub.location}</div></div>
+                  <span className={`lab ${pct >= 70 ? 'green' : pct >= 50 ? 'yellow' : total === 0 ? 'grey' : 'red'}`}>
+                    {total === 0 ? 'No data' : `${pct}% done`}
+                  </span>
+                </div>
+                <div className="bar">
+                  <i style={{ width: `${pct}%`, background: pct >= 70 ? 'var(--success)' : pct >= 50 ? '#ff8c00' : 'var(--red)' }} />
+                </div>
+                <div className="statline">
+                  <span><span className="dot" style={{ background: 'var(--secondaryText)' }} />Pending {p.pending}</span>
+                  <span><span className="dot" style={{ background: 'var(--mainV2)' }} />In Progress {p.inProgress}</span>
+                  <span><span className="dot" style={{ background: 'var(--success)' }} />Done {p.done}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
+
+        {kpis && kpis.inspections.length > 0 && (
+          <>
+            <div className="divider" />
+            <h3 className="section-title">QC results — today ({kpis.inspections.length} inspections)</h3>
+            <div className="card">
+              <table className="tbl">
+                <thead><tr><th>SKU</th><th>Hub</th><th>Sampling</th><th>% NC</th><th>Result</th><th>State</th></tr></thead>
+                <tbody>
+                  {(kpis.inspections as any[]).slice(0, 10).map((ins: any) => (
+                    <tr key={ins.id}>
+                      <td className="skuname">{ins.sku_id}</td>
+                      <td>{ins.hub_id}</td>
+                      <td>{ins.sampling_qty}/{ins.soh}</td>
+                      <td>{Number(ins.nc_pct).toFixed(1)}%</td>
+                      <td><span className={`lab ${ins.decision === 'Accepted' ? 'green' : ins.decision === 'Conditionally Accepted' ? 'orange' : 'red'}`}>{ins.decision}</span></td>
+                      <td><span className="lab grey">{ins.lifecycle_state}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )
