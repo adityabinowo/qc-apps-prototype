@@ -82,13 +82,26 @@ export function PriorityGeneratorPage() {
               <span className="ic">ℹ️</span>
               <div>Check risk parameters per SKU this week. SKUs with <b>Manual flag</b> are locked at their level regardless of score.</div>
             </div>
-            <div className="card">
-              <table className="tbl">
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table className="tbl" style={{ minWidth: 640 }}>
                 <thead>
-                  <tr>
-                    <th>SKU</th><th>Level</th>
-                    {PARAMS.map((p, i) => <th key={i} style={{ fontSize: 10, maxWidth: 80 }}>{p}</th>)}
-                    <th>Score</th>
+                  <tr style={{ verticalAlign: 'bottom' }}>
+                    <th style={{ minWidth: 160 }}>SKU</th>
+                    <th style={{ minWidth: 60 }}>Level</th>
+                    {PARAMS.map((p, i) => (
+                      <th key={i} style={{ width: 44, minWidth: 44, padding: '0 4px 10px' }}>
+                        <div style={{
+                          writingMode: 'vertical-rl',
+                          transform: 'rotate(180deg)',
+                          whiteSpace: 'nowrap',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: 0.3,
+                          lineHeight: 1.2,
+                        }}>{p}</div>
+                      </th>
+                    ))}
+                    <th style={{ minWidth: 52 }}>Score</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -103,7 +116,7 @@ export function PriorityGeneratorPage() {
                         <td><div className="skuname">{sku.name}</div><div className="muted">{sku.sku_id}</div></td>
                         <td><b>{sku.level}</b></td>
                         {p.map((on, i) => (
-                          <td key={i} style={{ textAlign: 'center' }}>
+                          <td key={i} style={{ textAlign: 'center', width: 44 }}>
                             <input type="checkbox" checked={on} onChange={() => toggle(sku.sku_id, i)} disabled={!!sku.manual_flag} />
                           </td>
                         ))}
