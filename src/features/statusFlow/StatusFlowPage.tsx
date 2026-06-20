@@ -1,29 +1,96 @@
 import { Topbar } from '../../components/Topbar'
 
-const STATES = [
-  { id: 'SUBMITTED', label: 'Submitted', color: '#E8EFFB', border: '#cfe0f5', description: 'Officer submits inspection result' },
-  { id: 'COMPLETED', label: 'Completed', color: '#E6F9EF', border: '#bce7bd', description: 'Accepted (0–5% NC) — no WMS change needed' },
-  { id: 'PENDING_SORT', label: 'Pending Sort', color: '#FFF8E6', border: '#ffe08a', description: 'Cond. Accepted (6–20% NC) — 1:1 sorting required' },
-  { id: 'PENDING_APPROVAL', label: 'Pending Approval', color: '#FFF0F3', border: '#ffc7d2', description: 'Quarantine All (>20% NC) or early stop — awaits SPV/PX approval' },
-  { id: 'APPROVED', label: 'Approved', color: '#E6F9EF', border: '#bce7bd', description: 'SPV/PX approved the status change' },
-  { id: 'WMS_WRITTEN', label: 'WMS Written', color: '#E8EFFB', border: '#cfe0f5', description: 'Stock status written to WIMS — terminal state' },
-  { id: 'REJECTED', label: 'Rejected', color: '#FFF0F3', border: '#ffc7d2', description: 'Status change rejected — stock stays Available' },
-]
+const FLOW_SVG = `<svg viewBox="0 0 1120 580" xmlns="http://www.w3.org/2000/svg" style="font-family:'Nunito Sans',sans-serif;">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8D96AA"/></marker>
+    <marker id="arrP" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#6847BB"/></marker>
+  </defs>
 
-const VERIF_STATES = [
-  { id: 'SELECTED', label: 'Selected', color: 'var(--tag-grey-bg)', border: '#e2e6ee', description: 'SPV selects completed inspection for re-check' },
-  { id: 'RE_INSPECTED', label: 'Re-Inspected', color: '#F0EDF8', border: '#d8cef0', description: 'SPV records verification result. Match → done. Mismatch → new status_change to approval.' },
-]
+  <text x="20" y="26" font-size="11" font-weight="800" fill="#2455B0" letter-spacing="1">MAIN PIPELINE · per inspection</text>
 
-const TRANSITIONS = [
-  { from: 'SUBMITTED', to: 'COMPLETED', label: '0–5% NC', color: '#43c78f' },
-  { from: 'SUBMITTED', to: 'PENDING_SORT', label: '6–20% NC', color: '#ff8c00' },
-  { from: 'SUBMITTED', to: 'PENDING_APPROVAL', label: '>20% or early stop', color: '#ff3d5e' },
-  { from: 'PENDING_SORT', to: 'PENDING_APPROVAL', label: 'Sort done → status change', color: '#ff8c00' },
-  { from: 'PENDING_APPROVAL', to: 'APPROVED', label: 'SPV/PX approves', color: '#43c78f' },
-  { from: 'PENDING_APPROVAL', to: 'REJECTED', label: 'SPV/PX rejects', color: '#ff3d5e' },
-  { from: 'APPROVED', to: 'WMS_WRITTEN', label: 'WIMS write confirmed', color: '#291D80' },
-]
+  <path d="M152,158 L188,158" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M340,150 L364,150 L364,70 L388,70" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M340,158 L388,158" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M340,166 L364,166 L364,250 L388,250" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M548,70 L596,70" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M548,158 L596,158" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M756,158 L788,158" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M548,250 L792,250 L792,188" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M940,150 L962,150 L962,120 L984,120" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M940,166 L962,166 L962,210 L984,210" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="20" y="130" width="132" height="56" rx="8" fill="#EFF3F9" stroke="#cfe0f5"/>
+  <text x="86" y="153" text-anchor="middle" font-size="12.5" font-weight="800" fill="#2455B0">SUBMITTED</text>
+  <text x="86" y="170" text-anchor="middle" font-size="10" fill="#778092">officer submits SKU</text>
+
+  <rect x="188" y="130" width="152" height="56" rx="8" fill="#fff" stroke="#e4eaf3"/>
+  <text x="264" y="153" text-anchor="middle" font-size="12" font-weight="800" fill="#40464E">AUTO % NON-CONF</text>
+  <text x="264" y="170" text-anchor="middle" font-size="10" fill="#778092">+ decision matrix</text>
+
+  <rect x="388" y="48" width="160" height="46" rx="8" fill="#E7F5E6" stroke="#bce7bd"/>
+  <text x="468" y="68" text-anchor="middle" font-size="11.5" font-weight="800" fill="#098A4E">Accepted · 0–5%</text>
+  <text x="468" y="84" text-anchor="middle" font-size="9.5" fill="#098A4E">no status change</text>
+  <rect x="388" y="135" width="160" height="46" rx="8" fill="#FFF3E6" stroke="#ffd9bd"/>
+  <text x="468" y="155" text-anchor="middle" font-size="11.5" font-weight="800" fill="#FA591D">Cond. Accepted · 6–20%</text>
+  <text x="468" y="171" text-anchor="middle" font-size="9.5" fill="#FA591D">needs 1:1 sort first</text>
+  <rect x="388" y="227" width="160" height="46" rx="8" fill="#FFEAEF" stroke="#ffc7d2"/>
+  <text x="468" y="247" text-anchor="middle" font-size="11.5" font-weight="800" fill="#EC465C">Quarantine All · &gt;20%</text>
+  <text x="468" y="263" text-anchor="middle" font-size="9.5" fill="#EC465C">bulk status change</text>
+
+  <rect x="596" y="48" width="190" height="46" rx="8" fill="#E7F5E6" stroke="#bce7bd"/>
+  <text x="691" y="68" text-anchor="middle" font-size="12" font-weight="800" fill="#098A4E">COMPLETED</text>
+  <text x="691" y="84" text-anchor="middle" font-size="9.5" fill="#098A4E">no WMS write · task closes</text>
+
+  <rect x="596" y="135" width="160" height="46" rx="8" fill="#fff" stroke="#e4eaf3"/>
+  <text x="676" y="155" text-anchor="middle" font-size="11.5" font-weight="800" fill="#40464E">SORT 1:1</text>
+  <text x="676" y="171" text-anchor="middle" font-size="9.5" fill="#778092">bad units → change</text>
+
+  <rect x="788" y="130" width="152" height="58" rx="8" fill="#FFF0B3" stroke="#ffe08a"/>
+  <text x="864" y="153" text-anchor="middle" font-size="12" font-weight="800" fill="#E67800">PENDING APPROVAL</text>
+  <text x="864" y="170" text-anchor="middle" font-size="9.5" fill="#E67800">SPV QA gate · SLA</text>
+
+  <rect x="984" y="96" width="124" height="48" rx="8" fill="#2455B0" stroke="#2455B0"/>
+  <text x="1046" y="116" text-anchor="middle" font-size="11.5" font-weight="800" fill="#fff">APPROVED</text>
+  <text x="1046" y="132" text-anchor="middle" font-size="9.5" fill="#cfe0f5">→ WMS write &lt;5min</text>
+  <rect x="984" y="186" width="124" height="46" rx="8" fill="#FFEAEF" stroke="#ffc7d2"/>
+  <text x="1046" y="206" text-anchor="middle" font-size="11.5" font-weight="800" fill="#EC465C">REJECTED</text>
+  <text x="1046" y="222" text-anchor="middle" font-size="9.5" fill="#EC465C">WMS unchanged</text>
+
+  <line x1="20" y1="330" x2="1100" y2="330" stroke="#e4eaf3" stroke-width="1.4" stroke-dasharray="5 5"/>
+  <text x="20" y="356" font-size="11" font-weight="800" fill="#6847BB" letter-spacing="1">VERIFICATION LANE · sampled &amp; asynchronous — audits the officer, does not block the gate</text>
+
+  <path d="M276,300 L276,418" fill="none" stroke="#b9aede" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrP)"/>
+  <text x="286" y="312" font-size="9.5" fill="#8D96AA">~20% of completed inspections sampled (risk / random)</text>
+
+  <path d="M356,444 L398,444" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M558,444 L582,444 L582,414 L606,414" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M558,444 L582,444 L582,484 L606,484" fill="none" stroke="#8D96AA" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M806,484 L864,484 L864,190" fill="none" stroke="#6847BB" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#arrP)"/>
+  <text x="872" y="300" font-size="9.5" font-weight="700" fill="#6847BB">mismatch creates a</text>
+  <text x="872" y="313" font-size="9.5" font-weight="700" fill="#6847BB">new status change →</text>
+
+  <rect x="196" y="418" width="160" height="52" rx="8" fill="#F0EDF8" stroke="#d8cef0"/>
+  <text x="276" y="440" text-anchor="middle" font-size="11.5" font-weight="800" fill="#6847BB">SELECTED</text>
+  <text x="276" y="456" text-anchor="middle" font-size="9.5" fill="#6847BB">verification ticket</text>
+  <rect x="398" y="418" width="160" height="52" rx="8" fill="#fff" stroke="#e4eaf3"/>
+  <text x="478" y="440" text-anchor="middle" font-size="11.5" font-weight="800" fill="#40464E">RE-INSPECTION</text>
+  <text x="478" y="456" text-anchor="middle" font-size="9.5" fill="#778092">SPV re-checks sample</text>
+  <rect x="606" y="391" width="196" height="46" rx="8" fill="#E7F5E6" stroke="#bce7bd"/>
+  <text x="704" y="411" text-anchor="middle" font-size="11.5" font-weight="800" fill="#098A4E">MATCH</text>
+  <text x="704" y="427" text-anchor="middle" font-size="9.5" fill="#098A4E">close · update officer compliance %</text>
+  <rect x="606" y="461" width="196" height="46" rx="8" fill="#FFEAEF" stroke="#ffc7d2"/>
+  <text x="704" y="481" text-anchor="middle" font-size="11.5" font-weight="800" fill="#EC465C">MISMATCH</text>
+  <text x="704" y="497" text-anchor="middle" font-size="9.5" fill="#EC465C">quarantine + wastage record</text>
+</svg>
+<div class="flowlegend">
+  <span><i style="background:#EFF3F9;"></i>Entry</span>
+  <span><i style="background:#E7F5E6;"></i>Terminal · no further gate</span>
+  <span><i style="background:#FFF3E6;"></i>Needs operational step</span>
+  <span><i style="background:#FFF0B3;"></i>Approval gate (only WMS write point)</span>
+  <span><i style="background:#2455B0;"></i>WMS write</span>
+  <span><i style="background:#FFEAEF;"></i>Rejected / quarantine</span>
+  <span><i style="background:#F0EDF8;"></i>Verification (audit lane)</span>
+</div>`
 
 export function StatusFlowPage() {
   return (
@@ -31,78 +98,28 @@ export function StatusFlowPage() {
       <Topbar title="Inspection Status Flow" />
       <div className="page">
         <h1 className="h1">Inspection Status Flow</h1>
-        <p className="sub">The lifecycle every inspection moves through. Verification is a separate lane — it re-checks completed inspections, not a replacement for approval.</p>
+        <p className="sub">
+          The lifecycle every inspection moves through. Approval and Verification are different lanes, not alternatives: the pipeline branches first on <b>"did this change the status vs WMS?"</b>, and Verification is a sampled audit that can inject new changes back into the approval gate.
+        </p>
+
         <div className="alert info">
           <span className="ic">ℹ️</span>
-          <div>
-            <b>Key correction vs an either/or model:</b> Verification ≠ Approval.
-            Most inspections finish as <b>Completed</b> (no WMS change at all).
-            Only bad-batch findings reach the Approval gate. Verification re-checks <em>officer accuracy</em>, independently.
+          <div>Key correction vs an either/or model: <b>Verification ≠ Approval</b>. Most inspections finish with no WMS change at all (Accepted). Only status changes reach the gate. Verification runs on a sample, asynchronously, and a mismatch <b>creates</b> a new change that still must pass the gate.</div>
+        </div>
+
+        <div className="flow-wrap" dangerouslySetInnerHTML={{ __html: FLOW_SVG }} />
+
+        <div className="row mt16" style={{ alignItems: 'stretch' }}>
+          <div className="card card-pad" style={{ flex: 1 }}>
+            <h3 className="section-title">Why two lanes, not one gate</h3>
+            <p className="note" style={{ lineHeight: 1.6 }}>The branch happens on <b>"is there a status change vs WMS?"</b> — not on "does SPV want to verify?". Accepted items (the majority) finish with no approval and no WMS write. Only proposed Available→Bad changes enter the gate, which protects the &lt;5-min write SLA. Verification is deliberately a sampled, after-the-fact audit so it never stalls inventory accuracy or piles onto the approval bottleneck.</p>
+          </div>
+          <div className="card card-pad" style={{ flex: 1 }}>
+            <h3 className="section-title">Rules to define before build</h3>
+            <p className="note" style={{ lineHeight: 1.6 }}>① <b>Sampling trigger</b> for the verification lane (e.g. always High-priority / &gt;20% items + random X% of the rest). ② <b>Authority:</b> on mismatch, SPV result supersedes the officer's. ③ <b>Config, not constants:</b> decision-matrix bands and the 20% verification sample are editable per category. ④ Mismatch-generated changes get a recommended 2nd-person check (AM / Ops Quality).</p>
           </div>
         </div>
-
-        <h3 className="section-title">Main Inspection Lane</h3>
-        <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, minWidth: 780 }}>
-            {STATES.map((s, i) => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{ background: s.color, border: `1.5px solid ${s.border}`, borderRadius: 10, padding: '12px 14px', minWidth: 130, maxWidth: 150 }}>
-                  <div style={{ fontWeight: 800, fontSize: 12, color: '#1c2540', marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 10, color: '#5a6a84', lineHeight: 1.4 }}>{s.description}</div>
-                </div>
-                {i < STATES.length - 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px', marginTop: 16 }}>
-                    <div style={{ width: 24, height: 2, background: '#d8e2ec' }} />
-                    <div style={{ fontSize: 10, color: '#8999b4' }}>›</div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <h3 className="section-title" style={{ marginTop: 24 }}>Transitions (decision rules)</h3>
-        <div className="card">
-          <table className="tbl">
-            <thead><tr><th>From</th><th>To</th><th>Trigger</th></tr></thead>
-            <tbody>
-              {TRANSITIONS.map((t, i) => (
-                <tr key={i}>
-                  <td><span className="lab grey">{t.from}</span></td>
-                  <td><span className="lab" style={{ background: t.color + '22', color: t.color, border: `1px solid ${t.color}55` }}>{t.to}</span></td>
-                  <td style={{ fontSize: 12, color: 'var(--secondaryText)' }}>{t.label}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3 className="section-title" style={{ marginTop: 24 }}>Verification Lane (independent)</h3>
-        <div style={{ display: 'flex', gap: 12 }}>
-          {VERIF_STATES.map(s => (
-            <div key={s.id} style={{ background: s.color, border: `1.5px solid ${s.border}`, borderRadius: 10, padding: '12px 16px', flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: 12, color: '#1c2540', marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 11, color: '#5a6a84', lineHeight: 1.4 }}>{s.description}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginTop: 24, background: '#F0EDF8', borderRadius: 10, padding: '14px 18px' }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>📐 Decision Bands (configurable)</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-            {[
-              { band: 'Accepted', range: '0–5% NC', action: 'No change. Lifecycle → COMPLETED.', color: 'var(--tag-green-bg)', border: '#bce7bd' },
-              { band: 'Cond. Accepted', range: '6–20% NC', action: '1:1 sort bad units. Lifecycle → PENDING_SORT.', color: 'var(--tag-orange-bg)', border: '#ffd9bd' },
-              { band: 'Quarantine All', range: '>20% NC or early stop', action: 'Entire batch. Lifecycle → PENDING_APPROVAL.', color: 'var(--tag-red-bg)', border: '#ffc7d2' },
-            ].map(b => (
-              <div key={b.band} style={{ background: b.color, border: `1.5px solid ${b.border}`, borderRadius: 8, padding: '10px 14px' }}>
-                <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 2 }}>{b.band}</div>
-                <div style={{ fontSize: 11, color: 'var(--secondaryText)', marginBottom: 4 }}>{b.range}</div>
-                <div style={{ fontSize: 11, color: '#1c2540' }}>{b.action}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <p className="note mt16">Corrected lifecycle · PRD #21–37 + Appendix 2 &amp; 6</p>
       </div>
     </section>
   )
