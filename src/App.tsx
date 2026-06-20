@@ -3,25 +3,19 @@ import { Rail } from './components/Rail'
 import { useAuth } from './context/AuthContext'
 import { LoginPage } from './features/auth/LoginPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
-
-function PlaceholderPage({ title, id }: { title: string; id: string }) {
-  return (
-    <section className="admin active" id={id}>
-      <div className="topbar">
-        <div className="crumb"><b>{title}</b></div>
-        <div className="spacer" />
-      </div>
-      <div className="page">
-        <h1 className="h1">{title}</h1>
-        <p className="sub">Coming in a future milestone.</p>
-        <div className="alert info">
-          <span className="ic">🚧</span>
-          <div>This screen will be built in a later milestone. Check <code>plan.md</code> §7 for the schedule.</div>
-        </div>
-      </div>
-    </section>
-  )
-}
+import { StatusFlowPage } from './features/statusFlow/StatusFlowPage'
+import { TaskManagementPage } from './features/tasks/TaskManagementPage'
+import { ApprovalQueuePage } from './features/approval/ApprovalQueuePage'
+import { SpvVerificationPage } from './features/verification/SpvVerificationPage'
+import { ChangeHistoryPage } from './features/history/ChangeHistoryPage'
+import { MasterLevelingPage } from './features/leveling/MasterLevelingPage'
+import { PriorityGeneratorPage } from './features/generator/PriorityGeneratorPage'
+import { InboxPage } from './features/officer/InboxPage'
+import { StockPage } from './features/officer/StockPage'
+import { InspectionStep1Page } from './features/officer/InspectionStep1Page'
+import { InspectionStep2Page } from './features/officer/InspectionStep2Page'
+import { ResultPage } from './features/officer/ResultPage'
+import { ReceiptPage } from './features/officer/ReceiptPage'
 
 function ProtectedLayout() {
   const { auth } = useAuth()
@@ -32,19 +26,19 @@ function ProtectedLayout() {
       <div className="view">
         <Routes>
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="flow" element={<PlaceholderPage title="Inspection Status Flow" id="adm-flow" />} />
-          <Route path="tasks" element={<PlaceholderPage title="Task Management" id="adm-tasks" />} />
-          <Route path="approval" element={<PlaceholderPage title="Approval Queue" id="adm-approval" />} />
-          <Route path="verification" element={<PlaceholderPage title="SPV Verification" id="adm-verify" />} />
-          <Route path="history" element={<PlaceholderPage title="Change History" id="adm-history" />} />
-          <Route path="leveling" element={<PlaceholderPage title="Master SKU Leveling" id="adm-leveling" />} />
-          <Route path="generator" element={<PlaceholderPage title="Priority Generator" id="adm-generator" />} />
-          <Route path="officer/inbox" element={<PlaceholderPage title="Task Inbox" id="mob-inbox" />} />
-          <Route path="officer/stock" element={<PlaceholderPage title="Open Task / Stock" id="mob-stock" />} />
-          <Route path="officer/step1" element={<PlaceholderPage title="Inspection · Step 1" id="mob-step1" />} />
-          <Route path="officer/step2" element={<PlaceholderPage title="Inspection · Step 2" id="mob-step2" />} />
-          <Route path="officer/result" element={<PlaceholderPage title="Result & Decision" id="mob-result" />} />
-          <Route path="officer/receipt" element={<PlaceholderPage title="Quality Receipt" id="mob-receipt" />} />
+          <Route path="flow" element={<StatusFlowPage />} />
+          <Route path="tasks" element={<TaskManagementPage />} />
+          <Route path="approval" element={<ApprovalQueuePage />} />
+          <Route path="verification" element={<SpvVerificationPage />} />
+          <Route path="history" element={<ChangeHistoryPage />} />
+          <Route path="leveling" element={<MasterLevelingPage />} />
+          <Route path="generator" element={<PriorityGeneratorPage />} />
+          <Route path="officer/inbox" element={<InboxPage />} />
+          <Route path="officer/stock" element={<StockPage />} />
+          <Route path="officer/step1" element={<InspectionStep1Page />} />
+          <Route path="officer/step2" element={<InspectionStep2Page />} />
+          <Route path="officer/result" element={<ResultPage />} />
+          <Route path="officer/receipt" element={<ReceiptPage />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Routes>
       </div>
