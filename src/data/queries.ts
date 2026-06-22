@@ -257,7 +257,12 @@ export async function fetchDashboardKpis() {
     const state = (i as { lifecycle_state: string }).lifecycle_state
     lifecycle[state] = (lifecycle[state] ?? 0) + 1
   }
-  return { inspectionsToday: inspections.length, pendingApprovals: pending.length, overSla, avgCompliance: Math.round(avgCompliance), covPct, lifecycle, inspections }
+  const verificationBands: Record<string, number> = {}
+  for (const v of verifs) {
+    const band = (v as { band?: string }).band
+    if (band) verificationBands[band] = (verificationBands[band] ?? 0) + 1
+  }
+  return { inspectionsToday: inspections.length, pendingApprovals: pending.length, overSla, avgCompliance: Math.round(avgCompliance), covPct, lifecycle, verificationBands, inspections }
 }
 
 export async function fetchHubProgress(hubIds: string[]): Promise<Record<string, { pending: number; inProgress: number; done: number }>> {
