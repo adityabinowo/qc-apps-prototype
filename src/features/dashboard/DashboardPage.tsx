@@ -4,14 +4,22 @@ import { useNavigate } from 'react-router-dom'
 import { Topbar } from '../../components/Topbar'
 import { fetchDashboardKpis, fetchHubProgress, fetchHubs } from '../../data/queries'
 
-const LIFECYCLE_STEPS = [
-  { key: 'SUBMITTED', label: 'Submitted', bg: 'var(--mainFaded)', border: '#cfe0f5' },
-  { key: 'COMPLETED', label: 'Completed · no change', bg: 'var(--tag-green-bg)', border: '#bce7bd' },
-  { key: 'PENDING_SORT', label: 'Sorting 1:1 (6–20%)', bg: 'var(--tag-orange-bg)', border: '#ffd9bd' },
-  { key: 'PENDING_APPROVAL', label: 'Pending approval', bg: 'var(--tag-yellow-bg)', border: '#ffe08a' },
-  { key: 'APPROVED', label: 'Approved → WMS', bg: '#E8EFFB', border: '#cfe0f5' },
-  { key: 'REJECTED', label: 'Rejected', bg: 'var(--tag-red-bg)', border: '#ffc7d2' },
-  { key: 'RE_INSPECTED', label: 'Verification done', bg: '#F0EDF8', border: '#d8cef0' },
+const MAIN_STEPS = [
+  { key: 'SUBMITTED',        label: 'Submitted',            bg: 'var(--mainFaded)',       border: '#cfe0f5', src: 'lifecycle' },
+  { key: 'COMPLETED',        label: 'Completed · no change', bg: 'var(--tag-green-bg)',   border: '#bce7bd', src: 'lifecycle' },
+  { key: 'PENDING_SORT',     label: 'Sorting 1:1',          bg: 'var(--tag-orange-bg)',   border: '#ffd9bd', src: 'lifecycle' },
+  { key: 'PENDING_APPROVAL', label: 'Pending approval',     bg: 'var(--tag-yellow-bg)',   border: '#ffe08a', src: 'lifecycle' },
+  { key: 'APPROVED',         label: 'Approved → WMS',       bg: '#E8EFFB',               border: '#cfe0f5', src: 'lifecycle' },
+  { key: 'REJECTED',         label: 'Rejected',             bg: 'var(--tag-red-bg)',      border: '#ffc7d2', src: 'lifecycle' },
+]
+
+const VERIF_STEPS = [
+  { key: 'SELECTED',          label: 'Selected',              bg: '#F0EDF8',               border: '#d8cef0', src: 'lifecycle' },
+  { key: 'RE_INSPECTED',      label: 'Re-inspected (Match)',  bg: 'var(--tag-green-bg)',   border: '#bce7bd', src: 'lifecycle' },
+  { key: 'MISMATCH_APPROVAL', label: 'Mismatch → approval',  bg: 'var(--tag-orange-bg)',  border: '#ffd9bd', src: 'lifecycle' },
+  { key: 'PASSED',            label: 'PASSED',               bg: 'var(--tag-green-bg)',   border: '#bce7bd', src: 'band' },
+  { key: 'PASSED_WITH_NOTE',  label: 'PASSED w/ note',       bg: 'var(--tag-yellow-bg)',  border: '#ffe08a', src: 'band' },
+  { key: 'NOT_PASSED',        label: 'NOT PASSED',           bg: 'var(--tag-red-bg)',     border: '#ffc7d2', src: 'band' },
 ]
 
 export function DashboardPage() {
@@ -79,13 +87,30 @@ export function DashboardPage() {
           <h3 className="section-title mb0">Inspection lifecycle — {period.toLowerCase()}</h3>
           <button className="btn btn-naked" onClick={() => navigate('/app/flow')}>View full flow →</button>
         </div>
-        <div className="lifeflow">
-          {LIFECYCLE_STEPS.map(s => (
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--secondaryText)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Main Pipeline</div>
+        <div className="lifeflow" style={{ marginBottom: 18 }}>
+          {MAIN_STEPS.map(s => (
             <div key={s.key} className="lifestep" style={{ background: s.bg, borderColor: s.border }}>
               <div className="n">{isLoading ? '—' : kpis?.lifecycle?.[s.key] ?? 0}</div>
               <div className="t">{s.label}</div>
             </div>
           ))}
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--secondaryText)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Verification Pipeline</div>
+        <div className="lifeflow">
+          {VERIF_STEPS.map(s => {
+            const count = isLoading ? '—' : s.src === 'band'
+              ? (kpis?.verificationBands?.[s.key] ?? 0)
+              : (kpis?.lifecycle?.[s.key] ?? 0)
+            return (
+              <div key={s.key} className="lifestep" style={{ background: s.bg, borderColor: s.border }}>
+                <div className="n">{count}</div>
+                <div className="t">{s.label}</div>
+              </div>
+            )
+          })}
         </div>
 
         <h3 className="section-title">Per-hub progress</h3>
