@@ -10,6 +10,7 @@ import { SpvVerificationPage } from './features/verification/SpvVerificationPage
 import { ChangeHistoryPage } from './features/history/ChangeHistoryPage'
 import { MasterLevelingPage } from './features/leveling/MasterLevelingPage'
 import { PriorityGeneratorPage } from './features/generator/PriorityGeneratorPage'
+import { SavedPriorityListPage } from './features/priorityList/SavedPriorityListPage'
 import { InboxPage } from './features/officer/InboxPage'
 import { StockPage } from './features/officer/StockPage'
 import { InspectionStep1Page } from './features/officer/InspectionStep1Page'
@@ -33,6 +34,7 @@ function ProtectedLayout() {
           <Route path="history" element={<ChangeHistoryPage />} />
           <Route path="leveling" element={<MasterLevelingPage />} />
           <Route path="generator" element={<PriorityGeneratorPage />} />
+          <Route path="priority-list" element={<SavedPriorityListPage />} />
           <Route path="officer/inbox" element={<InboxPage />} />
           <Route path="officer/stock" element={<StockPage />} />
           <Route path="officer/step1" element={<InspectionStep1Page />} />

@@ -13,6 +13,8 @@ const ADMIN_NAV = [
 const PHASE2_NAV = [
   { to: '/app/leveling', icon: '🏷️', label: 'Master SKU Leveling' },
   { to: '/app/generator', icon: '⚙️', label: 'Priority Generator' },
+  { to: '/app/priority-list', icon: '📋', label: 'Saved Priority List' },
+  { to: '/app/task-generator', icon: '🏭', label: 'QC Task Generator' },
 ]
 
 const OFFICER_NAV = [
@@ -58,7 +60,7 @@ export function Rail() {
               {item.label}
             </NavLink>
           ))}
-          <div className="grp">Phase 2 · PX Quality</div>
+          <div className="grp">QC Task Generator</div>
           {PHASE2_NAV.map(item => (
             <NavLink
               key={item.to}
