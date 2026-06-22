@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { coverageForLevel, levelFromPriority, riskPriority } from '../lib/rules'
 import type {
   HubInterface,
   InspectionInterface,
@@ -10,6 +11,7 @@ import type {
   TaskInterface,
   UserInterface,
   VerificationInterface,
+  WmsInventoryInterface,
 } from '../lib/types'
 
 // ── Hubs ──────────────────────────────────────────────────────────────────────
@@ -270,4 +272,157 @@ export async function fetchHubProgress(hubIds: string[]): Promise<Record<string,
     }
   }))
   return results
+}
+
+// ── Weeks ─────────────────────────────────────────────────────────────────────
+
+export async function fetchWeeks(): Promise<string[]> {
+  const { data, error } = await supabase.from('priority_list').select('week').order('week', { ascending: false })
+  if (error) throw error
+  return [...new Set((data ?? []).map((r: { week: string }) => r.week))]
+}
+
+// ── Priority list (replace-on-regenerate) ─────────────────────────────────────
+
+export async function replacePriorityList(
+  week: string,
+  rows: Omit<PriorityListInterface, 'id'>[],
+): Promise<void> {
+  const { error: delErr } = await supabase.from('priority_list').delete().eq('week', week)
+  if (delErr) throw delErr
+  const { error } = await supabase.from('priority_list').insert(rows)
+  if (error) throw error
+}
+
+// ── Leveling bulk upsert (skips manual_flag rows, logs changelog) ─────────────
+
+export async function upsertLevelingBulk(
+  rows: Pick<MasterLevelingInterface, 'sku_id' | 'name' | 'sku_number' | 'product_id' | 'category' | 'param_wastage' | 'param_inbound' | 'param_topsku' | 'param_complaint' | 'risk_score' | 'manual_flag'>[],
+  actor: string,
+): Promise<void> {
+  const { data: existing } = await supabase
+    .from('master_leveling')
+    .select('sku_id, risk_score, manual_flag')
+    .in('sku_id', rows.map(r => r.sku_id))
+
+  const existingMap = new Map((existing ?? []).map((r: { sku_id: string; risk_score: number; manual_flag: boolean }) => [r.sku_id, r]))
+  const now = new Date().toISOString()
+  const changelogs: object[] = []
+
+  const toUpsert = rows
+    .filter(r => !existingMap.get(r.sku_id)?.manual_flag)
+    .map(r => {
+      const priority = riskPriority(r.risk_score)
+      const level = levelFromPriority(priority)
+      const coverage_pct = coverageForLevel(level)
+      const prev = existingMap.get(r.sku_id)
+      if (prev && prev.risk_score !== r.risk_score) {
+        changelogs.push({ sku_id: r.sku_id, field: 'risk_score', old: String(prev.risk_score), new: String(r.risk_score), actor, ts: now })
+      }
+      return { ...r, priority, level, coverage_pct, manual_flag: false, updated_at: now, updated_by: actor }
+    })
+
+  if (toUpsert.length > 0) {
+    const { error } = await supabase.from('master_leveling').upsert(toUpsert)
+    if (error) throw error
+  }
+  if (changelogs.length > 0) {
+    const { error } = await supabase.from('leveling_changelog').insert(changelogs)
+    if (error) throw error
+  }
+}
+
+// ── WMS Inventory ─────────────────────────────────────────────────────────────
+
+export async function uploadWmsInventory(
+  week: string,
+  hubIds: string[],
+  rows: Omit<WmsInventoryInterface, 'id' | 'uploaded_at'>[],
+): Promise<void> {
+  for (const hubId of hubIds) {
+    const { error: delErr } = await supabase.from('wms_inventory').delete().eq('week', week).eq('hub_id', hubId)
+    if (delErr) throw delErr
+  }
+  const { error } = await supabase.from('wms_inventory').insert(rows)
+  if (error) throw error
+}
+
+export async function fetchWmsInventory(week: string, hubId?: string): Promise<WmsInventoryInterface[]> {
+  let q = supabase.from('wms_inventory').select('*').eq('week', week)
+  if (hubId) q = q.eq('hub_id', hubId)
+  const { data, error } = await q
+  if (error) throw error
+  return (data ?? []) as WmsInventoryInterface[]
+}
+
+// ── Task generation (priority list ∩ available inventory → unassigned tasks) ──
+
+export async function generateTasks(
+  week: string,
+  hubIds: string[],
+  actor: string,
+): Promise<Record<string, number>> {
+  const [{ data: priorityRows }, { data: levelingRows }] = await Promise.all([
+    supabase.from('priority_list').select('sku_id, week, level, coverage_pct, priority').eq('week', week),
+    supabase.from('master_leveling').select('sku_id, level, coverage_pct, priority'),
+  ])
+
+  const levelingMap = new Map((levelingRows ?? []).map((r: Pick<MasterLevelingInterface, 'sku_id' | 'level' | 'coverage_pct' | 'priority'>) => [r.sku_id, r]))
+  const counts: Record<string, number> = {}
+
+  await Promise.all(hubIds.map(async hubId => {
+    const { data: inv } = await supabase
+      .from('wms_inventory')
+      .select('sku_id, soh_available, sloc, expiry_date')
+      .eq('week', week).eq('hub_id', hubId).gt('soh_available', 0)
+
+    const invMap = new Map((inv ?? []).map((r: Pick<WmsInventoryInterface, 'sku_id' | 'soh_available' | 'sloc' | 'expiry_date'>) => [r.sku_id, r]))
+    const eligible = (priorityRows ?? []).filter((p: { sku_id: string }) => invMap.has(p.sku_id))
+
+    const tasks = eligible.map((p: { sku_id: string }) => {
+      const lev = levelingMap.get(p.sku_id)
+      const invRow = invMap.get(p.sku_id)!
+      const deadline = new Date(); deadline.setHours(18, 0, 0, 0)
+      return {
+        sku_id: p.sku_id,
+        hub_id: hubId,
+        officer_id: null,
+        priority: lev?.priority ?? 'Low',
+        level: lev?.level ?? 'LV1',
+        coverage_pct: lev?.coverage_pct ?? 20,
+        deadline: deadline.toISOString(),
+        instructions: `sloc:${invRow.sloc ?? ''} exp:${invRow.expiry_date ?? ''}`,
+        status: 'Pending' as const,
+        source: 'generated' as const,
+        created_by: actor,
+      }
+    })
+
+    if (tasks.length > 0) {
+      const { error } = await supabase.from('tasks').insert(tasks)
+      if (error) throw error
+    }
+    counts[hubId] = tasks.length
+  }))
+
+  return counts
+}
+
+// ── Bulk task insert ──────────────────────────────────────────────────────────
+
+export async function bulkInsertTasks(
+  rows: Omit<TaskInterface, 'id' | 'created_at'>[],
+): Promise<void> {
+  const { error } = await supabase.from('tasks').insert(rows)
+  if (error) throw error
+}
+
+// ── Bulk officer assignment ───────────────────────────────────────────────────
+
+export async function assignOfficerBulk(taskIds: string[], officerId: string): Promise<void> {
+  const { error } = await supabase
+    .from('tasks')
+    .update({ officer_id: officerId, assigned_at: new Date().toISOString() })
+    .in('id', taskIds)
+  if (error) throw error
 }

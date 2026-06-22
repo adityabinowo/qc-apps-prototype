@@ -20,7 +20,7 @@ export const CONFIG = {
 
   // Risk priority thresholds
   riskMediumMin: 3,
-  riskHighMin: 5,
+  riskHighMin: 4,
 } as const
 
 export type ConfigType = typeof CONFIG

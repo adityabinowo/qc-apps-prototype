@@ -1,5 +1,5 @@
 import { CONFIG } from './config'
-import type { DecisionBandType, LevelType, PriorityType, VerificationBandType } from './types'
+import type { DecisionBandType, LevelType, PriorityListInterface, PriorityType, VerificationBandType, WmsInventoryInterface } from './types'
 
 export interface DecisionResultInterface {
   band: DecisionBandType
@@ -83,6 +83,25 @@ export function riskPriority(
   if (paramsMet >= config.riskHighMin) return 'High'
   if (paramsMet >= config.riskMediumMin) return 'Medium'
   return 'Low'
+}
+
+/** Level derived from priority (High→LV3, Medium→LV2, Low→LV1) */
+export function levelFromPriority(priority: PriorityType): LevelType {
+  if (priority === 'High') return 'LV3'
+  if (priority === 'Medium') return 'LV2'
+  return 'LV1'
+}
+
+/** Whether a SKU is eligible for a task: in the week's priority list AND has available SOH */
+export function eligibleForTask(
+  skuId: string,
+  week: string,
+  priorityList: Pick<PriorityListInterface, 'sku_id' | 'week'>[],
+  inventory: Pick<WmsInventoryInterface, 'sku_id' | 'soh_available'>[],
+): boolean {
+  const inList = priorityList.some(r => r.sku_id === skuId && r.week === week)
+  const hasStock = inventory.some(r => r.sku_id === skuId && r.soh_available > 0)
+  return inList && hasStock
 }
 
 /** Coverage % for a given level */
