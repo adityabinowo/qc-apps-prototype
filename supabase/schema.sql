@@ -184,5 +184,39 @@ INSERT INTO config (key, value) VALUES
   ('coverage_lv3', '70')
 ON CONFLICT (key) DO NOTHING;
 
+-- ── schema migrations (run after initial schema) ────────────────────────────
+-- master_leveling: add sku_number + 4 risk params
+ALTER TABLE master_leveling ADD COLUMN IF NOT EXISTS sku_number TEXT;
+ALTER TABLE master_leveling ADD COLUMN IF NOT EXISTS param_wastage  INTEGER;
+ALTER TABLE master_leveling ADD COLUMN IF NOT EXISTS param_inbound  INTEGER;
+ALTER TABLE master_leveling ADD COLUMN IF NOT EXISTS param_topsku   INTEGER;
+ALTER TABLE master_leveling ADD COLUMN IF NOT EXISTS param_complaint INTEGER;
+
+-- priority_list: add 4 risk params + unique week/sku constraint
+ALTER TABLE priority_list ADD COLUMN IF NOT EXISTS param_wastage   INTEGER;
+ALTER TABLE priority_list ADD COLUMN IF NOT EXISTS param_inbound   INTEGER;
+ALTER TABLE priority_list ADD COLUMN IF NOT EXISTS param_topsku    INTEGER;
+ALTER TABLE priority_list ADD COLUMN IF NOT EXISTS param_complaint INTEGER;
+ALTER TABLE priority_list DROP CONSTRAINT IF EXISTS priority_list_week_sku_key;
+ALTER TABLE priority_list ADD CONSTRAINT priority_list_week_sku_key UNIQUE (week, sku_id);
+
+-- tasks: add source + assigned_at; make officer_id nullable if not already
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source      TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','generated','bulk'));
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ;
+ALTER TABLE tasks ALTER COLUMN officer_id DROP NOT NULL;
+
+-- ── wms_inventory ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS wms_inventory (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  week         TEXT NOT NULL,
+  hub_id       TEXT REFERENCES hubs(id),
+  product_id   TEXT NOT NULL,
+  sku_id       TEXT NOT NULL,
+  soh_available INTEGER NOT NULL DEFAULT 0,
+  sloc         TEXT,
+  expiry_date  DATE,
+  uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Storage bucket: run in Supabase Dashboard > Storage > New bucket
 -- Name: inspection-photos  |  Public: true (prototype only)

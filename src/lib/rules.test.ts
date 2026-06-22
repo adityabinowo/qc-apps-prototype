@@ -4,6 +4,8 @@ import {
   compliance,
   coverageForLevel,
   decide,
+  eligibleForTask,
+  levelFromPriority,
   nextStates,
   nonConformityPct,
   riskPriority,
@@ -88,17 +90,46 @@ describe('verificationSampleQty', () => {
 })
 
 describe('riskPriority', () => {
-  it('Low for 1–2 params', () => {
+  it('Low for 0–2 params', () => {
+    expect(riskPriority(0)).toBe('Low')
     expect(riskPriority(1)).toBe('Low')
     expect(riskPriority(2)).toBe('Low')
   })
-  it('Medium for 3–4', () => {
+  it('Medium for exactly 3', () => {
     expect(riskPriority(3)).toBe('Medium')
-    expect(riskPriority(4)).toBe('Medium')
   })
-  it('High for ≥5', () => {
-    expect(riskPriority(5)).toBe('High')
-    expect(riskPriority(6)).toBe('High')
+  it('High for ≥4 (4-param model)', () => {
+    expect(riskPriority(4)).toBe('High')
+  })
+})
+
+describe('levelFromPriority', () => {
+  it('High → LV3', () => expect(levelFromPriority('High')).toBe('LV3'))
+  it('Medium → LV2', () => expect(levelFromPriority('Medium')).toBe('LV2'))
+  it('Low → LV1', () => expect(levelFromPriority('Low')).toBe('LV1'))
+})
+
+describe('eligibleForTask', () => {
+  const list = [
+    { sku_id: 'A', week: '2026-06-16' },
+    { sku_id: 'B', week: '2026-06-16' },
+  ]
+  const inv = [
+    { sku_id: 'A', soh_available: 10 },
+    { sku_id: 'B', soh_available: 0 },
+    { sku_id: 'C', soh_available: 5 },
+  ]
+  it('true when in list AND has stock', () => {
+    expect(eligibleForTask('A', '2026-06-16', list, inv)).toBe(true)
+  })
+  it('false when in list but soh_available = 0', () => {
+    expect(eligibleForTask('B', '2026-06-16', list, inv)).toBe(false)
+  })
+  it('false when not in priority list', () => {
+    expect(eligibleForTask('C', '2026-06-16', list, inv)).toBe(false)
+  })
+  it('false when wrong week', () => {
+    expect(eligibleForTask('A', '2026-06-09', list, inv)).toBe(false)
   })
 })
 

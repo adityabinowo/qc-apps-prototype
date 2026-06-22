@@ -47,9 +47,14 @@ export interface StockInterface {
 
 export interface MasterLevelingInterface {
   sku_id: string
+  sku_number?: string
   name: string
   product_id: string
   category: CategoryType
+  param_wastage?: number
+  param_inbound?: number
+  param_topsku?: number
+  param_complaint?: number
   risk_score: number
   priority: PriorityType
   level: LevelType
@@ -74,6 +79,10 @@ export interface PriorityListInterface {
   week: string
   sku_id: string
   params_met: number
+  param_wastage?: number
+  param_inbound?: number
+  param_topsku?: number
+  param_complaint?: number
   risk_score: number
   priority: PriorityType
   level: LevelType
@@ -92,8 +101,22 @@ export interface TaskInterface {
   deadline: string
   instructions: string
   status: TaskStatusType
+  source?: 'manual' | 'generated' | 'bulk'
+  assigned_at?: string | null
   created_by: string
   created_at: string
+}
+
+export interface WmsInventoryInterface {
+  id: string
+  week: string
+  hub_id: string
+  product_id: string
+  sku_id: string
+  soh_available: number
+  sloc: string
+  expiry_date: string | null
+  uploaded_at: string
 }
 
 export interface InspectionInterface {
