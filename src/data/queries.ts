@@ -287,6 +287,13 @@ export async function fetchWeeks(): Promise<string[]> {
   return [...new Set((data ?? []).map((r: { week: string }) => r.week))]
 }
 
+// ── Chunk helper (PostgREST URL limit ~2000 chars; safe batch = 200 for .in, 500 for insert) ──
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
 // ── Priority list (replace-on-regenerate) ─────────────────────────────────────
 
 export async function replacePriorityList(
@@ -295,8 +302,10 @@ export async function replacePriorityList(
 ): Promise<void> {
   const { error: delErr } = await supabase.from('priority_list').delete().eq('week', week)
   if (delErr) throw delErr
-  const { error } = await supabase.from('priority_list').insert(rows)
-  if (error) throw error
+  for (const batch of chunkArray(rows, 500)) {
+    const { error } = await supabase.from('priority_list').insert(batch)
+    if (error) throw error
+  }
 }
 
 // ── Leveling bulk upsert (skips manual_flag rows, logs changelog) ─────────────
@@ -305,12 +314,17 @@ export async function upsertLevelingBulk(
   rows: Pick<MasterLevelingInterface, 'sku_id' | 'name' | 'sku_number' | 'product_id' | 'category' | 'param_wastage' | 'param_inbound' | 'param_topsku' | 'param_complaint' | 'risk_score' | 'manual_flag'>[],
   actor: string,
 ): Promise<void> {
-  const { data: existing } = await supabase
-    .from('master_leveling')
-    .select('sku_id, risk_score, manual_flag')
-    .in('sku_id', rows.map(r => r.sku_id))
+  // Fetch existing in chunks to stay within PostgREST URL limits
+  const existingAll: { sku_id: string; risk_score: number; manual_flag: boolean }[] = []
+  for (const batch of chunkArray(rows.map(r => r.sku_id), 200)) {
+    const { data } = await supabase
+      .from('master_leveling')
+      .select('sku_id, risk_score, manual_flag')
+      .in('sku_id', batch)
+    if (data) existingAll.push(...(data as typeof existingAll))
+  }
 
-  const existingMap = new Map((existing ?? []).map((r: { sku_id: string; risk_score: number; manual_flag: boolean }) => [r.sku_id, r]))
+  const existingMap = new Map(existingAll.map(r => [r.sku_id, r]))
   const now = new Date().toISOString()
   const changelogs: object[] = []
 
@@ -327,13 +341,15 @@ export async function upsertLevelingBulk(
       return { ...r, priority, level, coverage_pct, manual_flag: false, updated_at: now, updated_by: actor }
     })
 
-  if (toUpsert.length > 0) {
-    const { error } = await supabase.from('master_leveling').upsert(toUpsert)
+  for (const batch of chunkArray(toUpsert, 500)) {
+    const { error } = await supabase.from('master_leveling').upsert(batch)
     if (error) throw error
   }
   if (changelogs.length > 0) {
-    const { error } = await supabase.from('leveling_changelog').insert(changelogs)
-    if (error) throw error
+    for (const batch of chunkArray(changelogs, 500)) {
+      const { error } = await supabase.from('leveling_changelog').insert(batch)
+      if (error) throw error
+    }
   }
 }
 
