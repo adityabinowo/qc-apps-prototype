@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { Topbar } from '../../components/Topbar'
-import { fetchMasterLeveling, fetchWeeks, replacePriorityList, upsertLevelingBulk } from '../../data/queries'
+import { fetchMasterLeveling, fetchPriorityList, fetchWeeks, replacePriorityList, upsertLevelingBulk } from '../../data/queries'
 import { levelFromPriority, riskPriority } from '../../lib/rules'
 import { useAuth } from '../../context/AuthContext'
 
@@ -65,16 +65,33 @@ export function PriorityGeneratorPage() {
   const { data: leveling = [] } = useQuery({ queryKey: ['leveling'], queryFn: fetchMasterLeveling })
 
   const [selectedWeek, setSelectedWeek] = useState(today)
+  const { data: existingList = [] } = useQuery({
+    queryKey: ['priority_list', selectedWeek],
+    queryFn: () => fetchPriorityList(selectedWeek),
+  })
+
   const [parsedRows, setParsedRows] = useState<ParsedRow[] | null>(null)
   const [fileName, setFileName] = useState('')
   const [parseError, setParseError] = useState('')
   const [done, setDone] = useState(false)
+  const [showDiffTable, setShowDiffTable] = useState(false)
 
   const allWeeks = [...new Set([today, ...weeksFromDb])].sort().reverse()
   const isPast = selectedWeek < today
   const canRun = !isPast && parsedRows !== null && parsedRows.length > 0
 
   const categoryMap = new Map(leveling.map(l => [l.sku_id, l.category]))
+
+  // Diff against existing priority list for the selected week
+  const existingMap = new Map((existingList as any[]).map(r => [r.sku_id, r]))
+  const parsedIds = new Set(parsedRows?.map(r => r.product_id) ?? [])
+  const diffNew = parsedRows?.filter(r => !existingMap.has(r.product_id)) ?? []
+  const diffRemoved = (existingList as any[]).filter(r => !parsedIds.has(r.sku_id))
+  const diffChanged = parsedRows?.filter(r => {
+    const ex = existingMap.get(r.product_id)
+    return ex && riskPriority(r.risk_score) !== ex.priority
+  }) ?? []
+  const hasDiff = existingList.length > 0 && parsedRows !== null
 
   const handleFile = async (file: File) => {
     setParseError('')
@@ -182,9 +199,16 @@ export function PriorityGeneratorPage() {
         )}
 
         {done && (
-          <div className="alert success">
+          <div className="alert success" style={{ marginBottom: 12 }}>
             <span className="ic">✅</span>
-            <div>Priority list for <b>{selectedWeek}</b> saved — {parsedRows?.length} SKUs written. Master Leveling synced.</div>
+            <div>
+              Priority list for <b>{selectedWeek}</b> saved — <b>{parsedRows?.length} SKUs</b> written. Master Leveling synced.
+              {hasDiff && (
+                <span style={{ marginLeft: 8 }}>
+                  <b>{diffNew.length}</b> new · <b>{diffRemoved.length}</b> removed · <b>{diffChanged.length}</b> priority changes
+                </span>
+              )}
+            </div>
           </div>
         )}
 
@@ -212,6 +236,49 @@ export function PriorityGeneratorPage() {
 
         {parseError && (
           <div className="alert warn"><span className="ic">⚠️</span><div>{parseError}</div></div>
+        )}
+
+        {/* Diff panel — shown when parsed rows exist and there's an existing list to compare */}
+        {hasDiff && parsedRows && (
+          <div className="card card-pad" style={{ marginBottom: 20, borderLeft: '3px solid var(--main)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: diffChanged.length > 0 ? 10 : 0 }}>
+              <div style={{ fontSize: 13 }}>
+                <b>vs. existing list for {selectedWeek}:</b>
+                <span style={{ marginLeft: 10, color: 'var(--tag-green-text, #1e7e34)' }}>+{diffNew.length} new</span>
+                <span style={{ marginLeft: 8, color: 'var(--tag-red-text, #EC465C)' }}>−{diffRemoved.length} removed</span>
+                <span style={{ marginLeft: 8, color: 'var(--tag-orange-text, #FA591D)' }}>⇄ {diffChanged.length} priority changes</span>
+              </div>
+              {diffChanged.length > 0 && (
+                <button className="btn btn-naked" style={{ fontSize: 12 }} onClick={() => setShowDiffTable(v => !v)}>
+                  {showDiffTable ? 'Hide changes ▲' : 'Show changes ▼'}
+                </button>
+              )}
+            </div>
+            {showDiffTable && diffChanged.length > 0 && (
+              <div style={{ overflowX: 'auto', maxHeight: 260 }}>
+                <table className="tbl" style={{ minWidth: 400 }}>
+                  <thead>
+                    <tr><th>SKU</th><th>Old priority</th><th>Old score</th><th>New priority</th><th>New score</th></tr>
+                  </thead>
+                  <tbody>
+                    {diffChanged.map(row => {
+                      const ex = existingMap.get(row.product_id)
+                      const newPriority = riskPriority(row.risk_score)
+                      return (
+                        <tr key={row.product_id}>
+                          <td><div className="skuname">{row.name || row.product_id}</div><div className="muted">{row.product_id}</div></td>
+                          <td><span className={`lab ${ex?.priority === 'High' ? 'red' : ex?.priority === 'Medium' ? 'orange' : 'grey'}`}>{ex?.priority}</span></td>
+                          <td><span className="lab grey">{ex?.risk_score ?? '—'}</span></td>
+                          <td><span className={`lab ${newPriority === 'High' ? 'red' : newPriority === 'Medium' ? 'orange' : 'grey'}`}>{newPriority}</span></td>
+                          <td><span className={`lab ${row.risk_score >= 4 ? 'red' : row.risk_score === 3 ? 'orange' : 'grey'}`}>{row.risk_score}</span></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Parsed preview table */}
