@@ -218,5 +218,10 @@ CREATE TABLE IF NOT EXISTS wms_inventory (
   uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Drop FK constraints that block bulk-loading from Superset exports
+-- (master_leveling and priority_list may contain SKUs not yet in stock)
+ALTER TABLE master_leveling DROP CONSTRAINT IF EXISTS master_leveling_sku_id_fkey;
+ALTER TABLE priority_list   DROP CONSTRAINT IF EXISTS priority_list_sku_id_fkey;
+
 -- Storage bucket: run in Supabase Dashboard > Storage > New bucket
 -- Name: inspection-photos  |  Public: true (prototype only)
