@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Topbar } from '../../components/Topbar'
 import { Modal } from '../../components/Modal'
-import { fetchMasterLeveling, upsertLeveling } from '../../data/queries'
+import { fetchMasterLevelingPaged, upsertLeveling } from '../../data/queries'
 import { coverageForLevel } from '../../lib/rules'
 import type { MasterLevelingInterface, LevelType, CategoryType, PriorityType } from '../../lib/types'
 
+const PAGE_SIZE = 50
 const LEVELS: LevelType[] = ['LV1', 'LV2', 'LV3']
 const CATEGORIES: CategoryType[] = ['Fresh', 'Frozen', 'Dry']
 const PRIORITIES: PriorityType[] = ['Low', 'Medium', 'High']
@@ -22,23 +23,36 @@ function emptyRow(): Partial<MasterLevelingInterface> {
 
 export function MasterLevelingPage() {
   const qc = useQueryClient()
-  const { data: rows = [], isLoading } = useQuery({ queryKey: ['leveling'], queryFn: fetchMasterLeveling })
+
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('')
   const [lvlFilter, setLvlFilter] = useState('')
+  const [priFilter, setPriFilter] = useState('')
+  const [page, setPage] = useState(0)
   const [editing, setEditing] = useState<Partial<MasterLevelingInterface> | null>(null)
+
+  const queryKey = ['leveling_paged', page, search, catFilter, lvlFilter, priFilter]
+  const { data, isLoading } = useQuery({
+    queryKey,
+    queryFn: () => fetchMasterLevelingPaged({ page, pageSize: PAGE_SIZE, search, category: catFilter, level: lvlFilter, priority: priFilter }),
+    placeholderData: prev => prev,
+  })
+
+  const rows = data?.rows ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
   const isNew = editing !== null && !rows.find(r => r.sku_id === editing.sku_id)
+
+  const resetPage = () => setPage(0)
 
   const save = useMutation({
     mutationFn: (row: Partial<MasterLevelingInterface>) => upsertLeveling(row),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['leveling'] }); setEditing(null) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leveling_paged'] })
+      qc.invalidateQueries({ queryKey: ['leveling'] })
+      setEditing(null)
+    },
   })
-
-  const filtered = rows.filter(r =>
-    (!search || r.name.toLowerCase().includes(search.toLowerCase()) || r.sku_id.includes(search)) &&
-    (!catFilter || r.category === catFilter) &&
-    (!lvlFilter || r.level === lvlFilter),
-  )
 
   const handleScoreChange = (score: number) => {
     if (!editing) return
@@ -54,7 +68,7 @@ export function MasterLevelingPage() {
 
   return (
     <section className="admin active" id="adm-leveling">
-      <Topbar title="Master SKU Leveling" breadcrumb="Phase 2" />
+      <Topbar title="Master SKU Leveling" breadcrumb="QC Task Generator" />
       <div className="page">
         <div className="between" style={{ marginBottom: 18 }}>
           <div>
@@ -63,35 +77,49 @@ export function MasterLevelingPage() {
           </div>
           <button className="btn btn-primary lg" onClick={() => setEditing(emptyRow())}>＋ Add SKU</button>
         </div>
+
         <div className="alert info">
           <span className="ic">ℹ️</span>
           <div>Any SKU without a record defaults to <b>LV1 (20%)</b>. Escalation to LV2/LV3 is a manual override by PX Quality.</div>
         </div>
+
         <div className="filterbar">
-          <div className="search">🔎<input placeholder="Search SKU or name…" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          <select className="inp" value={catFilter} onChange={e => setCatFilter(e.target.value)}>
+          <div className="search">
+            🔎
+            <input
+              placeholder="Search SKU, name or product ID…"
+              value={search}
+              onChange={e => { setSearch(e.target.value); resetPage() }}
+            />
+          </div>
+          <select className="inp" value={catFilter} onChange={e => { setCatFilter(e.target.value); resetPage() }}>
             <option value="">All Categories</option>
             {CATEGORIES.map(c => <option key={c}>{c}</option>)}
           </select>
-          <select className="inp" value={lvlFilter} onChange={e => setLvlFilter(e.target.value)}>
+          <select className="inp" value={lvlFilter} onChange={e => { setLvlFilter(e.target.value); resetPage() }}>
             <option value="">All Levels</option>
             {LEVELS.map(l => <option key={l}>{l}</option>)}
           </select>
+          <select className="inp" value={priFilter} onChange={e => { setPriFilter(e.target.value); resetPage() }}>
+            <option value="">All Priorities</option>
+            {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+          </select>
         </div>
+
         <div className="card">
           <table className="tbl">
             <thead>
-              <tr><th>SKU</th><th>Product ID</th><th>Category</th><th>Risk score</th><th>Priority</th><th>Level</th><th>Coverage</th><th>Manual</th><th></th></tr>
+              <tr><th>SKU</th><th>Product ID</th><th>Category</th><th>Score</th><th>Priority</th><th>Level</th><th>Coverage</th><th>Manual</th><th></th></tr>
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--secondaryText)' }}>Loading…</td></tr>}
-              {!isLoading && filtered.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--secondaryText)' }}>No records</td></tr>}
-              {filtered.map(r => (
+              {!isLoading && rows.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--secondaryText)' }}>No records</td></tr>}
+              {rows.map(r => (
                 <tr key={r.sku_id}>
                   <td><div className="skuname">{r.name}</div><div className="muted">{r.sku_id}</div></td>
                   <td className="muted">{r.product_id}</td>
                   <td>{r.category}</td>
-                  <td>{r.risk_score}</td>
+                  <td><span className={`lab ${r.risk_score >= 4 ? 'red' : r.risk_score === 3 ? 'orange' : 'grey'}`}>{r.risk_score}</span></td>
                   <td><span className={`lab ${r.priority === 'High' ? 'red' : r.priority === 'Medium' ? 'orange' : 'grey'}`}>{r.priority}</span></td>
                   <td><b>{r.level}</b></td>
                   <td>{r.coverage_pct}%</td>
@@ -101,6 +129,17 @@ export function MasterLevelingPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="between" style={{ marginTop: 12, fontSize: 13, color: 'var(--secondaryText)' }}>
+          <span>{total.toLocaleString()} SKUs total · page {page + 1} of {Math.max(totalPages, 1)}</span>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn btn-outline" disabled={page === 0} onClick={() => setPage(0)}>«</button>
+            <button className="btn btn-outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>‹ Prev</button>
+            <button className="btn btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next ›</button>
+            <button className="btn btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>»</button>
+          </div>
         </div>
       </div>
 
@@ -137,8 +176,8 @@ export function MasterLevelingPage() {
             </select>
           </div>
           <div className="field">
-            <label>Risk Score (1–6)</label>
-            <input className="inp fullw" type="number" min={1} max={6} value={editing?.risk_score ?? 1} onChange={e => handleScoreChange(Number(e.target.value))} />
+            <label>Risk Score (0–4)</label>
+            <input className="inp fullw" type="number" min={0} max={4} value={editing?.risk_score ?? 0} onChange={e => handleScoreChange(Number(e.target.value))} />
           </div>
         </div>
         <div className="grid2">
