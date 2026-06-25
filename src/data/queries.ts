@@ -315,15 +315,13 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-// ── Priority list (replace-on-regenerate) ─────────────────────────────────────
+// ── Priority list (upsert — uploaded rows update in-place, others untouched) ──
 
 export async function replacePriorityList(
   rows: Omit<PriorityListInterface, 'id'>[],
 ): Promise<void> {
-  const { error: delErr } = await supabase.from('priority_list').delete().not('id', 'is', null)
-  if (delErr) throw delErr
   for (const batch of chunkArray(rows, 500)) {
-    const { error } = await supabase.from('priority_list').insert(batch)
+    const { error } = await supabase.from('priority_list').upsert(batch, { onConflict: 'sku_id' })
     if (error) throw error
   }
 }
