@@ -41,7 +41,7 @@ export function SavedPriorityListPage() {
             onChange={e => setSelectedWeek(e.target.value)}
           >
             {allWeeks.map(w => (
-              <option key={w} value={w}>{w}{w === today ? ' (current)' : ''}</option>
+              <option key={w} value={w}>Uploaded as per {w}{w === today ? ' (current)' : ''}</option>
             ))}
           </select>
         </div>

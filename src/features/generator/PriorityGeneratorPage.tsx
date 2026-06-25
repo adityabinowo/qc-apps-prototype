@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { Topbar } from '../../components/Topbar'
-import { fetchMasterLeveling, fetchPriorityList, fetchWeeks, replacePriorityList, upsertLevelingBulk } from '../../data/queries'
+import { fetchMasterLeveling, fetchPriorityList, replacePriorityList, upsertLevelingBulk } from '../../data/queries'
 import { levelFromPriority, riskPriority } from '../../lib/rules'
 import { useAuth } from '../../context/AuthContext'
 
@@ -72,10 +72,9 @@ export function PriorityGeneratorPage() {
   const today = currentWeek()
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const { data: weeksFromDb = [] } = useQuery({ queryKey: ['weeks'], queryFn: fetchWeeks })
   const { data: leveling = [] } = useQuery({ queryKey: ['leveling'], queryFn: fetchMasterLeveling })
 
-  const [selectedWeek, setSelectedWeek] = useState(today)
+  const [selectedWeek] = useState(today)
   const { data: existingList = [] } = useQuery({
     queryKey: ['priority_list', selectedWeek],
     queryFn: () => fetchPriorityList(selectedWeek),
@@ -89,9 +88,7 @@ export function PriorityGeneratorPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [showDiffTable, setShowDiffTable] = useState(false)
 
-  const allWeeks = [...new Set([today, ...weeksFromDb])].sort().reverse()
-  const isPast = selectedWeek < today
-  const canRun = !isPast && parsedRows !== null && parsedRows.length > 0 && phase === 'idle'
+  const canRun = parsedRows !== null && parsedRows.length > 0 && phase === 'idle'
 
   const categoryMap = new Map(leveling.map(l => [l.sku_id, l.category]))
 
@@ -192,41 +189,23 @@ export function PriorityGeneratorPage() {
         <div className="between" style={{ marginBottom: 18 }}>
           <div>
             <h1 className="h1">Priority Generator</h1>
-            <p className="sub mb0">Upload the weekly risk spreadsheet → generate this week's inspection priority list</p>
+            <p className="sub mb0">Upload the risk spreadsheet → generate the inspection priority list</p>
           </div>
-          <div className="row">
-            <select
-              className="inp"
-              value={selectedWeek}
-              onChange={e => { setSelectedWeek(e.target.value); setParsedRows(null); setPhase('idle'); setErrorMsg('') }}
-            >
-              {allWeeks.map(w => (
-                <option key={w} value={w}>{w}{w === today ? ' (current)' : ''}</option>
-              ))}
-            </select>
-            <button
-              className="btn btn-primary lg"
-              onClick={() => run.mutate()}
-              disabled={!canRun}
-            >
-              ⚙️ Run for {selectedWeek}
-            </button>
-          </div>
+          <button
+            className="btn btn-primary lg"
+            onClick={() => run.mutate()}
+            disabled={!canRun}
+          >
+            ⚙️ Run
+          </button>
         </div>
 
-        {isPast && (
-          <div className="alert warn">
-            <span className="ic">🔒</span>
-            <div>Past week selected — view only. Switch to the current week to regenerate.</div>
-          </div>
-        )}
-
-        {!isPast && phase === 'idle' && (
+        {phase === 'idle' && (
           <div className="alert info">
             <span className="ic">ℹ️</span>
             <div>
               Upload the Superset export (.xlsx or .csv). Expected columns: <b>product_id · sku_number · product_name · wastage_inventory_warehouse · inbound_to_bad_hub · top_sku_commercial · quality_complain · total_parameter</b>.
-              Running will replace the saved list for <b>{selectedWeek}</b> and sync Master Leveling.
+              Running will replace the saved list and sync Master Leveling.
             </div>
           </div>
         )}
@@ -258,7 +237,7 @@ export function PriorityGeneratorPage() {
         )}
 
         {/* Upload zone */}
-        {!isPast && (
+        {(
           <div
             className="card card-pad"
             style={{ cursor: 'pointer', textAlign: 'center', border: '2px dashed var(--border)', marginBottom: 20 }}

@@ -116,7 +116,7 @@ export function MasterLevelingPage() {
               {!isLoading && rows.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--secondaryText)' }}>No records</td></tr>}
               {rows.map(r => (
                 <tr key={r.sku_id}>
-                  <td><div className="skuname">{r.name}</div><div className="muted">{r.sku_id}</div></td>
+                  <td><div className="skuname">{r.name}</div><div className="muted">{r.sku_number ?? '—'}</div></td>
                   <td className="muted">{r.product_id}</td>
                   <td>{r.category}</td>
                   <td><span className={`lab ${r.risk_score >= 4 ? 'red' : r.risk_score === 3 ? 'orange' : 'grey'}`}>{r.risk_score}</span></td>
