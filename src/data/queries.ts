@@ -48,6 +48,32 @@ export async function fetchMasterLeveling(): Promise<MasterLevelingInterface[]> 
   return data as MasterLevelingInterface[]
 }
 
+export async function fetchMasterLevelingPaged({
+  page = 0,
+  pageSize = 50,
+  search = '',
+  category = '',
+  level = '',
+  priority = '',
+}: {
+  page?: number
+  pageSize?: number
+  search?: string
+  category?: string
+  level?: string
+  priority?: string
+} = {}): Promise<{ rows: MasterLevelingInterface[]; total: number }> {
+  let q = supabase.from('master_leveling').select('*', { count: 'exact' })
+  if (search) q = q.or(`name.ilike.%${search}%,sku_id.ilike.%${search}%,product_id.ilike.%${search}%`)
+  if (category) q = q.eq('category', category)
+  if (level) q = q.eq('level', level)
+  if (priority) q = q.eq('priority', priority)
+  q = q.order('name').range(page * pageSize, (page + 1) * pageSize - 1)
+  const { data, count, error } = await q
+  if (error) throw error
+  return { rows: (data ?? []) as MasterLevelingInterface[], total: count ?? 0 }
+}
+
 export async function upsertLeveling(row: Partial<MasterLevelingInterface>): Promise<void> {
   const { error } = await supabase.from('master_leveling').upsert(row)
   if (error) throw error
