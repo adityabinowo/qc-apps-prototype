@@ -27,13 +27,6 @@ const STEPS = [
   'Done ✓',
 ]
 
-function currentWeek(): string {
-  const d = new Date()
-  const monday = new Date(d)
-  monday.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  return monday.toISOString().slice(0, 10)
-}
-
 function parseSpreadsheet(file: File): Promise<ParsedRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -69,16 +62,10 @@ export function PriorityGeneratorPage() {
   const qc = useQueryClient()
   const { auth } = useAuth()
   const navigate = useNavigate()
-  const today = currentWeek()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const { data: leveling = [] } = useQuery({ queryKey: ['leveling'], queryFn: fetchMasterLeveling })
-
-  const [selectedWeek] = useState(today)
-  const { data: existingList = [] } = useQuery({
-    queryKey: ['priority_list', selectedWeek],
-    queryFn: () => fetchPriorityList(selectedWeek),
-  })
+  const { data: existingList = [] } = useQuery({ queryKey: ['priority_list'], queryFn: fetchPriorityList })
 
   const [parsedRows, setParsedRows] = useState<ParsedRow[] | null>(null)
   const [fileName, setFileName] = useState('')
@@ -151,7 +138,6 @@ export function PriorityGeneratorPage() {
 
       // Step 3: Write priority list (after leveling rows exist)
       const priorityRows = parsedRows.map(row => ({
-        week: selectedWeek,
         sku_id: row.product_id,
         params_met: row.risk_score,
         param_wastage: row.param_wastage,
@@ -164,12 +150,11 @@ export function PriorityGeneratorPage() {
         status: 'Pending' as const,
         generated_at: new Date().toISOString(),
       }))
-      await replacePriorityList(selectedWeek, priorityRows)
+      await replacePriorityList(priorityRows)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['priority_list'] })
       qc.invalidateQueries({ queryKey: ['leveling'] })
-      qc.invalidateQueries({ queryKey: ['weeks'] })
       setStepIdx(STEPS.length - 1)
       setTimeout(() => {
         setPhase('done')
@@ -221,7 +206,7 @@ export function PriorityGeneratorPage() {
           <div className="alert success" style={{ marginBottom: 12 }}>
             <span className="ic">✅</span>
             <div>
-              Priority list for <b>{selectedWeek}</b> saved — <b>{parsedRows?.length} SKUs</b>. Master Leveling synced.
+              Priority list saved — <b>{parsedRows?.length} SKUs</b>. Master Leveling synced.
               {hasDiff && (
                 <span style={{ marginLeft: 8 }}>
                   <b style={{ color: 'var(--success)' }}>+{diffNew.length} new</b>
@@ -270,7 +255,7 @@ export function PriorityGeneratorPage() {
           <div className="card card-pad" style={{ marginBottom: 20, borderLeft: '3px solid var(--main)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: diffChanged.length > 0 && showDiffTable ? 10 : 0 }}>
               <div style={{ fontSize: 13 }}>
-                <b>vs. existing list for {selectedWeek}:</b>
+                <b>vs. current saved list:</b>
                 <span style={{ marginLeft: 10, color: 'var(--success)' }}>+{diffNew.length} new</span>
                 <span style={{ marginLeft: 8, color: 'var(--red)' }}>−{diffRemoved.length} removed</span>
                 <span style={{ marginLeft: 8 }}>⇄ {diffChanged.length} priority changes</span>

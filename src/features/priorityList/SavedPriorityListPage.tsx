@@ -1,26 +1,16 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Topbar } from '../../components/Topbar'
-import { fetchPriorityList, fetchWeeks } from '../../data/queries'
-
-function currentWeek(): string {
-  const d = new Date()
-  const monday = new Date(d)
-  monday.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  return monday.toISOString().slice(0, 10)
-}
+import { fetchPriorityList } from '../../data/queries'
 
 export function SavedPriorityListPage() {
-  const today = currentWeek()
-  const [selectedWeek, setSelectedWeek] = useState(today)
-
-  const { data: weeksFromDb = [] } = useQuery({ queryKey: ['weeks'], queryFn: fetchWeeks })
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['priority_list', selectedWeek],
-    queryFn: () => fetchPriorityList(selectedWeek),
+    queryKey: ['priority_list'],
+    queryFn: fetchPriorityList,
   })
 
-  const allWeeks = [...new Set([today, ...weeksFromDb])].sort().reverse()
+  const uploadedAt = rows[0]?.generated_at
+    ? new Date(rows[0].generated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null
 
   const high = rows.filter((r: any) => r.priority === 'High').length
   const med  = rows.filter((r: any) => r.priority === 'Medium').length
@@ -30,20 +20,13 @@ export function SavedPriorityListPage() {
     <section className="admin active" id="adm-priority-list">
       <Topbar title="Saved Priority List" breadcrumb="QC Task Generator" />
       <div className="page">
-        <div className="between" style={{ marginBottom: 18 }}>
-          <div>
-            <h1 className="h1">Saved Priority List</h1>
-            <p className="sub mb0">Generated priority list per week — use this as input for the QC Task Generator</p>
-          </div>
-          <select
-            className="inp"
-            value={selectedWeek}
-            onChange={e => setSelectedWeek(e.target.value)}
-          >
-            {allWeeks.map(w => (
-              <option key={w} value={w}>Uploaded as per {w}{w === today ? ' (current)' : ''}</option>
-            ))}
-          </select>
+        <div style={{ marginBottom: 18 }}>
+          <h1 className="h1">Saved Priority List</h1>
+          <p className="sub mb0">
+            {uploadedAt
+              ? <>Current inspection priority list — uploaded <b>{uploadedAt}</b></>
+              : 'No priority list yet — run the Priority Generator to create one'}
+          </p>
         </div>
 
         {rows.length > 0 && (
@@ -90,7 +73,7 @@ export function SavedPriorityListPage() {
               {!isLoading && rows.length === 0 && (
                 <tr>
                   <td colSpan={10} style={{ textAlign: 'center', padding: 32, color: 'var(--secondaryText)' }}>
-                    No priority list for {selectedWeek}. Run the Priority Generator to create one.
+                    No priority list found. Run the Priority Generator to create one.
                   </td>
                 </tr>
               )}
@@ -119,7 +102,7 @@ export function SavedPriorityListPage() {
             </tbody>
           </table>
         </div>
-        <p className="note mt16">{rows.length > 0 ? `${rows.length} SKUs · week ${selectedWeek}` : ''}</p>
+        <p className="note mt16">{rows.length > 0 ? `${rows.length} SKUs` : ''}</p>
       </div>
     </section>
   )

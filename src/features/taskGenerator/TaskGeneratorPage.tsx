@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { Topbar } from '../../components/Topbar'
-import { fetchHubs, fetchPriorityList, fetchWeeks, generateTasks, uploadWmsInventory } from '../../data/queries'
+import { fetchHubs, fetchPriorityList, generateTasks, uploadWmsInventory } from '../../data/queries'
 import { useAuth } from '../../context/AuthContext'
 
 const SUPERSET_INVENTORY_URL = '__TODO_PROVIDE_LINK__'
@@ -61,17 +61,11 @@ function parseInventory(file: File): Promise<InvRow[]> {
 
 export function TaskGeneratorPage() {
   const { auth } = useAuth()
-  const today = currentWeek()
+  const selectedWeek = currentWeek()
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const { data: weeksFromDb = [] } = useQuery({ queryKey: ['weeks'], queryFn: fetchWeeks })
   const { data: hubs = [] } = useQuery({ queryKey: ['hubs'], queryFn: fetchHubs })
-
-  const [selectedWeek, setSelectedWeek] = useState(today)
-  const { data: priorityRows = [] } = useQuery({
-    queryKey: ['priority_list', selectedWeek],
-    queryFn: () => fetchPriorityList(selectedWeek),
-  })
+  const { data: priorityRows = [] } = useQuery({ queryKey: ['priority_list'], queryFn: fetchPriorityList })
 
   const [invRows, setInvRows] = useState<InvRow[] | null>(null)
   const [fileName, setFileName] = useState('')
@@ -80,8 +74,6 @@ export function TaskGeneratorPage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [stepIdx, setStepIdx] = useState(0)
   const [summary, setSummary] = useState<Record<string, number>>({})
-
-  const allWeeks = [...new Set([today, ...weeksFromDb])].sort().reverse()
 
   // location_ids found in uploaded file
   const locationIds = invRows ? [...new Set(invRows.map(r => r.location_id))] : []
@@ -160,14 +152,9 @@ export function TaskGeneratorPage() {
             <h1 className="h1">QC Task Generator</h1>
             <p className="sub mb0">Upload WMS inventory → match priority list → generate unassigned tasks per hub</p>
           </div>
-          <div className="row">
-            <select className="inp" value={selectedWeek} onChange={e => { setSelectedWeek(e.target.value); setPhase('idle'); setSummary({}) }}>
-              {allWeeks.map(w => <option key={w} value={w}>{w}{w === today ? ' (current)' : ''}</option>)}
-            </select>
-            <button className="btn btn-primary lg" onClick={handleGenerate} disabled={!canGenerate}>
-              🏭 Generate Tasks
-            </button>
-          </div>
+          <button className="btn btn-primary lg" onClick={handleGenerate} disabled={!canGenerate}>
+            🏭 Generate Tasks
+          </button>
         </div>
 
         {/* Priority list status */}
@@ -175,8 +162,8 @@ export function TaskGeneratorPage() {
           <span className="ic">{priorityRows.length > 0 ? 'ℹ️' : '⚠️'}</span>
           <div>
             {priorityRows.length > 0
-              ? <><b>{priorityRows.length} SKUs</b> in the priority list for <b>{selectedWeek}</b> — ready to match against inventory.</>
-              : <>No priority list found for <b>{selectedWeek}</b>. Run the <b>Priority Generator</b> first.</>}
+              ? <><b>{priorityRows.length} SKUs</b> in the priority list — ready to match against inventory.</>
+              : <>No priority list found. Run the <b>Priority Generator</b> first.</>}
           </div>
         </div>
 

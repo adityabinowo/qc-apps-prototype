@@ -111,8 +111,8 @@ describe('levelFromPriority', () => {
 
 describe('eligibleForTask', () => {
   const list = [
-    { sku_id: 'A', week: '2026-06-16' },
-    { sku_id: 'B', week: '2026-06-16' },
+    { sku_id: 'A' },
+    { sku_id: 'B' },
   ]
   const inv = [
     { sku_id: 'A', soh_available: 10 },
@@ -120,16 +120,13 @@ describe('eligibleForTask', () => {
     { sku_id: 'C', soh_available: 5 },
   ]
   it('true when in list AND has stock', () => {
-    expect(eligibleForTask('A', '2026-06-16', list, inv)).toBe(true)
+    expect(eligibleForTask('A', list, inv)).toBe(true)
   })
   it('false when in list but soh_available = 0', () => {
-    expect(eligibleForTask('B', '2026-06-16', list, inv)).toBe(false)
+    expect(eligibleForTask('B', list, inv)).toBe(false)
   })
   it('false when not in priority list', () => {
-    expect(eligibleForTask('C', '2026-06-16', list, inv)).toBe(false)
-  })
-  it('false when wrong week', () => {
-    expect(eligibleForTask('A', '2026-06-09', list, inv)).toBe(false)
+    expect(eligibleForTask('C', list, inv)).toBe(false)
   })
 })
 

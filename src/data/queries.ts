@@ -178,10 +178,11 @@ export async function appendAudit(
 
 // ── Priority list ─────────────────────────────────────────────────────────────
 
-export async function fetchPriorityList(week?: string): Promise<PriorityListInterface[]> {
-  let q = supabase.from('priority_list').select('*, master_leveling(name,category)')
-  if (week) q = q.eq('week', week)
-  const { data, error } = await q.order('risk_score', { ascending: false })
+export async function fetchPriorityList(): Promise<PriorityListInterface[]> {
+  const { data, error } = await supabase
+    .from('priority_list')
+    .select('*, master_leveling(name,category)')
+    .order('risk_score', { ascending: false })
   if (error) throw error
   return data as unknown as PriorityListInterface[]
 }
@@ -307,12 +308,6 @@ export async function fetchHubProgress(hubIds: string[]): Promise<Record<string,
 
 // ── Weeks ─────────────────────────────────────────────────────────────────────
 
-export async function fetchWeeks(): Promise<string[]> {
-  const { data, error } = await supabase.from('priority_list').select('week').order('week', { ascending: false })
-  if (error) throw error
-  return [...new Set((data ?? []).map((r: { week: string }) => r.week))]
-}
-
 // ── Chunk helper (PostgREST URL limit ~2000 chars; safe batch = 200 for .in, 500 for insert) ──
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
@@ -323,10 +318,9 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 // ── Priority list (replace-on-regenerate) ─────────────────────────────────────
 
 export async function replacePriorityList(
-  week: string,
   rows: Omit<PriorityListInterface, 'id'>[],
 ): Promise<void> {
-  const { error: delErr } = await supabase.from('priority_list').delete().eq('week', week)
+  const { error: delErr } = await supabase.from('priority_list').delete().not('id', 'is', null)
   if (delErr) throw delErr
   for (const batch of chunkArray(rows, 500)) {
     const { error } = await supabase.from('priority_list').insert(batch)
