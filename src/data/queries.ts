@@ -315,13 +315,19 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-// ── Priority list (upsert — uploaded rows update in-place, others untouched) ──
+// ── Priority list (targeted replace — only uploaded sku_ids are touched) ──────
 
 export async function replacePriorityList(
   rows: Omit<PriorityListInterface, 'id'>[],
 ): Promise<void> {
+  const skuIds = rows.map(r => r.sku_id)
+  // Delete only the sku_ids being uploaded; all other rows remain untouched
+  for (const batch of chunkArray(skuIds, 200)) {
+    const { error } = await supabase.from('priority_list').delete().in('sku_id', batch)
+    if (error) throw error
+  }
   for (const batch of chunkArray(rows, 500)) {
-    const { error } = await supabase.from('priority_list').upsert(batch, { onConflict: 'sku_id' })
+    const { error } = await supabase.from('priority_list').insert(batch)
     if (error) throw error
   }
 }
