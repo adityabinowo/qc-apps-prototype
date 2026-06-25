@@ -76,7 +76,6 @@ export interface LevelingChangelogInterface {
 
 export interface PriorityListInterface {
   id: string
-  week: string
   sku_id: string
   params_met: number
   param_wastage?: number

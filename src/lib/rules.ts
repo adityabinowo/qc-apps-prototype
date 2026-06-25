@@ -92,14 +92,13 @@ export function levelFromPriority(priority: PriorityType): LevelType {
   return 'LV1'
 }
 
-/** Whether a SKU is eligible for a task: in the week's priority list AND has available SOH */
+/** Whether a SKU is eligible for a task: in the priority list AND has available SOH */
 export function eligibleForTask(
   skuId: string,
-  week: string,
-  priorityList: Pick<PriorityListInterface, 'sku_id' | 'week'>[],
+  priorityList: Pick<PriorityListInterface, 'sku_id'>[],
   inventory: Pick<WmsInventoryInterface, 'sku_id' | 'soh_available'>[],
 ): boolean {
-  const inList = priorityList.some(r => r.sku_id === skuId && r.week === week)
+  const inList = priorityList.some(r => r.sku_id === skuId)
   const hasStock = inventory.some(r => r.sku_id === skuId && r.soh_available > 0)
   return inList && hasStock
 }
