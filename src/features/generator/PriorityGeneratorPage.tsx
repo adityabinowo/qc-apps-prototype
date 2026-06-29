@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { Topbar } from '../../components/Topbar'
+import { FoodLoader } from '../../components/FoodLoader'
 import { fetchMasterLeveling, fetchPriorityList, replacePriorityList, upsertLevelingBulk } from '../../data/queries'
 import { levelFromPriority, riskPriority } from '../../lib/rules'
 import { useAuth } from '../../context/AuthContext'
@@ -20,11 +21,17 @@ interface ParsedRow {
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
-const STEPS = [
+const CAPTIONS = [
   'Reading spreadsheet…',
   'Syncing SKU leveling…',
   'Writing priority list…',
   'Done ✓',
+]
+const FLAVORS = [
+  'Tallying your tomatoes…',
+  'Cross-referencing the crisper…',
+  'Filing the freshness reports…',
+  'Plated and ready ✓',
 ]
 
 function parseSpreadsheet(file: File): Promise<ParsedRow[]> {
@@ -93,7 +100,7 @@ export function PriorityGeneratorPage() {
   // Animate steps while running
   useEffect(() => {
     if (phase !== 'running') return
-    if (stepIdx >= STEPS.length - 1) return
+    if (stepIdx >= CAPTIONS.length - 1) return
     const t = setTimeout(() => setStepIdx(i => i + 1), 900)
     return () => clearTimeout(t)
   }, [phase, stepIdx])
@@ -157,7 +164,7 @@ export function PriorityGeneratorPage() {
       qc.invalidateQueries({ queryKey: ['priority_list_paged'] })
       qc.invalidateQueries({ queryKey: ['priority_list_summary'] })
       qc.invalidateQueries({ queryKey: ['leveling'] })
-      setStepIdx(STEPS.length - 1)
+      setStepIdx(CAPTIONS.length - 1)
       setTimeout(() => {
         setPhase('done')
         setTimeout(() => navigate('/app/priority-list'), 1200)
@@ -350,20 +357,15 @@ export function PriorityGeneratorPage() {
 
       {/* Loading overlay */}
       {phase === 'running' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,20,40,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-          <div className="card card-pad" style={{ width: 400, textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⚙️</div>
-            <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 20 }}>{STEPS[stepIdx]}</div>
-            <div style={{ background: 'var(--border)', borderRadius: 99, height: 8, overflow: 'hidden', marginBottom: 10 }}>
-              <div style={{
-                background: 'var(--main)',
-                height: '100%',
-                width: `${Math.round((stepIdx + 1) / STEPS.length * 100)}%`,
-                transition: 'width 0.7s ease',
-                borderRadius: 99,
-              }} />
-            </div>
-            <div className="muted" style={{ fontSize: 11 }}>Step {stepIdx + 1} of {STEPS.length} · {parsedRows?.length?.toLocaleString()} SKUs</div>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,20,40,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
+          <div className="card card-pad" style={{ width: 420, textAlign: 'center' }}>
+            <FoodLoader
+              caption={CAPTIONS[stepIdx]}
+              activeStep={stepIdx}
+              totalSteps={CAPTIONS.length}
+              flavor={FLAVORS[stepIdx % FLAVORS.length]}
+            />
+            <div className="muted" style={{ fontSize: 11, marginTop: 12 }}>{parsedRows?.length?.toLocaleString()} SKUs · step {stepIdx + 1} of {CAPTIONS.length}</div>
           </div>
         </div>
       )}

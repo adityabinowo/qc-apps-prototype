@@ -4,8 +4,10 @@ import type {
   HubInterface,
   InspectionInterface,
   LevelingChangelogInterface,
+  LevelType,
   MasterLevelingInterface,
   PriorityListInterface,
+  PriorityType,
   StatusChangeInterface,
   StockInterface,
   TaskInterface,
@@ -421,8 +423,10 @@ export async function uploadWmsInventory(
     const { error: delErr } = await supabase.from('wms_inventory').delete().eq('week', week).eq('hub_id', hubId)
     if (delErr) throw delErr
   }
-  const { error } = await supabase.from('wms_inventory').insert(rows)
-  if (error) throw error
+  for (const batch of chunkArray(rows, 500)) {
+    const { error } = await supabase.from('wms_inventory').insert(batch)
+    if (error) throw error
+  }
 }
 
 export async function fetchWmsInventory(week: string, hubId?: string): Promise<WmsInventoryInterface[]> {
@@ -439,45 +443,57 @@ export async function generateTasks(
   week: string,
   hubIds: string[],
   actor: string,
+  priorities: PriorityType[] = ['High', 'Medium', 'Low'],
 ): Promise<Record<string, number>> {
-  const [{ data: priorityRows }, { data: levelingRows }] = await Promise.all([
-    supabase.from('priority_list').select('sku_id, week, level, coverage_pct, priority').eq('week', week),
-    supabase.from('master_leveling').select('sku_id, level, coverage_pct, priority'),
-  ])
+  // Fetch ALL priority SKUs — no week filter, paginate past the 1000-row cap
+  const priorityAll: { sku_id: string; level: LevelType; priority: PriorityType }[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('priority_list').select('sku_id, level, priority').range(from, from + 999)
+    if (error) throw error
+    priorityAll.push(...(data ?? []) as any)
+    if (!data || data.length < 1000) break
+  }
+  const pMap = new Map(
+    priorityAll
+      .filter(p => priorities.includes(p.priority))
+      .map(p => [p.sku_id, p])
+  )
 
-  const levelingMap = new Map((levelingRows ?? []).map((r: Pick<MasterLevelingInterface, 'sku_id' | 'level' | 'coverage_pct' | 'priority'>) => [r.sku_id, r]))
   const counts: Record<string, number> = {}
 
   await Promise.all(hubIds.map(async hubId => {
-    const { data: inv } = await supabase
-      .from('wms_inventory')
-      .select('sku_id, soh_available, sloc, expiry_date')
-      .eq('week', week).eq('hub_id', hubId).gt('soh_available', 0)
+    // Paginate inventory per hub past 1000
+    const inv: { sku_id: string; soh_available: number; sloc: string | null; expiry_date: string | null }[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('wms_inventory').select('sku_id, soh_available, sloc, expiry_date')
+        .eq('week', week).eq('hub_id', hubId).gt('soh_available', 0)
+        .range(from, from + 999)
+      if (error) throw error
+      inv.push(...(data ?? []) as any)
+      if (!data || data.length < 1000) break
+    }
 
-    const invMap = new Map((inv ?? []).map((r: Pick<WmsInventoryInterface, 'sku_id' | 'soh_available' | 'sloc' | 'expiry_date'>) => [r.sku_id, r]))
-    const eligible = (priorityRows ?? []).filter((p: { sku_id: string }) => invMap.has(p.sku_id))
+    // Dedupe by sku_id, intersect with priority map
+    const seen = new Set<string>()
+    const tasks = inv
+      .filter(r => pMap.has(r.sku_id) && !seen.has(r.sku_id) && seen.add(r.sku_id))
+      .map(r => {
+        const p = pMap.get(r.sku_id)!
+        const level = (p.level ?? 'LV1') as LevelType
+        const deadline = new Date(); deadline.setHours(18, 0, 0, 0)
+        return {
+          sku_id: r.sku_id, hub_id: hubId, officer_id: null,
+          priority: p.priority ?? 'Low', level, coverage_pct: coverageForLevel(level),
+          deadline: deadline.toISOString(),
+          instructions: `sloc:${r.sloc ?? ''} exp:${r.expiry_date ?? ''}`,
+          status: 'Pending' as const, source: 'generated' as const, created_by: actor,
+        }
+      })
 
-    const tasks = eligible.map((p: { sku_id: string }) => {
-      const lev = levelingMap.get(p.sku_id)
-      const invRow = invMap.get(p.sku_id)!
-      const deadline = new Date(); deadline.setHours(18, 0, 0, 0)
-      return {
-        sku_id: p.sku_id,
-        hub_id: hubId,
-        officer_id: null,
-        priority: lev?.priority ?? 'Low',
-        level: lev?.level ?? 'LV1',
-        coverage_pct: lev?.coverage_pct ?? 20,
-        deadline: deadline.toISOString(),
-        instructions: `sloc:${invRow.sloc ?? ''} exp:${invRow.expiry_date ?? ''}`,
-        status: 'Pending' as const,
-        source: 'generated' as const,
-        created_by: actor,
-      }
-    })
-
-    if (tasks.length > 0) {
-      const { error } = await supabase.from('tasks').insert(tasks)
+    for (const batch of chunkArray(tasks, 500)) {
+      const { error } = await supabase.from('tasks').insert(batch)
       if (error) throw error
     }
     counts[hubId] = tasks.length
