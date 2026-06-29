@@ -154,6 +154,8 @@ export function PriorityGeneratorPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['priority_list'] })
+      qc.invalidateQueries({ queryKey: ['priority_list_paged'] })
+      qc.invalidateQueries({ queryKey: ['priority_list_summary'] })
       qc.invalidateQueries({ queryKey: ['leveling'] })
       setStepIdx(STEPS.length - 1)
       setTimeout(() => {

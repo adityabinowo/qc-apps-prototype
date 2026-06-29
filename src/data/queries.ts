@@ -187,6 +187,39 @@ export async function fetchPriorityList(): Promise<PriorityListInterface[]> {
   return data as unknown as PriorityListInterface[]
 }
 
+export async function fetchPriorityListPaged({ page = 0, pageSize = 50 } = {}): Promise<{ rows: PriorityListInterface[]; total: number }> {
+  const { data, count, error } = await supabase
+    .from('priority_list')
+    .select('*, master_leveling(name,category)', { count: 'exact' })
+    .order('risk_score', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1)
+  if (error) throw error
+  return { rows: (data ?? []) as unknown as PriorityListInterface[], total: count ?? 0 }
+}
+
+export async function fetchPriorityListSummary(): Promise<{ total: number; high: number; medium: number; low: number; uploadedAt: string | null }> {
+  const [
+    { count: total },
+    { count: high },
+    { count: medium },
+    { count: low },
+    { data: sample },
+  ] = await Promise.all([
+    supabase.from('priority_list').select('*', { count: 'exact', head: true }),
+    supabase.from('priority_list').select('*', { count: 'exact', head: true }).eq('priority', 'High'),
+    supabase.from('priority_list').select('*', { count: 'exact', head: true }).eq('priority', 'Medium'),
+    supabase.from('priority_list').select('*', { count: 'exact', head: true }).eq('priority', 'Low'),
+    supabase.from('priority_list').select('generated_at').order('generated_at', { ascending: false }).limit(1),
+  ])
+  return {
+    total: total ?? 0,
+    high: high ?? 0,
+    medium: medium ?? 0,
+    low: low ?? 0,
+    uploadedAt: (sample as { generated_at: string }[] | null)?.[0]?.generated_at ?? null,
+  }
+}
+
 export async function insertPriorityList(rows: Omit<PriorityListInterface, 'id'>[]): Promise<void> {
   const { error } = await supabase.from('priority_list').insert(rows)
   if (error) throw error

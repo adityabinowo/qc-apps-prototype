@@ -1,20 +1,31 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Topbar } from '../../components/Topbar'
-import { fetchPriorityList } from '../../data/queries'
+import { fetchPriorityListPaged, fetchPriorityListSummary } from '../../data/queries'
+
+const PAGE_SIZE = 50
 
 export function SavedPriorityListPage() {
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['priority_list'],
-    queryFn: fetchPriorityList,
+  const [page, setPage] = useState(0)
+
+  const { data: pageData, isLoading } = useQuery({
+    queryKey: ['priority_list_paged', page],
+    queryFn: () => fetchPriorityListPaged({ page, pageSize: PAGE_SIZE }),
+    placeholderData: prev => prev,
   })
 
-  const uploadedAt = rows[0]?.generated_at
-    ? new Date(rows[0].generated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    : null
+  const { data: summary } = useQuery({
+    queryKey: ['priority_list_summary'],
+    queryFn: fetchPriorityListSummary,
+  })
 
-  const high = rows.filter((r: any) => r.priority === 'High').length
-  const med  = rows.filter((r: any) => r.priority === 'Medium').length
-  const low  = rows.filter((r: any) => r.priority === 'Low').length
+  const rows = pageData?.rows ?? []
+  const total = summary?.total ?? 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  const uploadedAt = summary?.uploadedAt
+    ? new Date(summary.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null
 
   return (
     <section className="admin active" id="adm-priority-list">
@@ -29,22 +40,22 @@ export function SavedPriorityListPage() {
           </p>
         </div>
 
-        {rows.length > 0 && (
+        {total > 0 && (
           <div className="kpis" style={{ marginBottom: 20 }}>
             <div className="kpi">
-              <div className="v">{rows.length}</div>
+              <div className="v">{total.toLocaleString()}</div>
               <div className="l">Total SKUs</div>
             </div>
             <div className="kpi">
-              <div className="v" style={{ color: 'var(--tag-red-text, #EC465C)' }}>{high}</div>
+              <div className="v" style={{ color: 'var(--tag-red-text, #EC465C)' }}>{summary?.high ?? 0}</div>
               <div className="l">High priority</div>
             </div>
             <div className="kpi">
-              <div className="v" style={{ color: 'var(--tag-orange-text, #FA591D)' }}>{med}</div>
+              <div className="v" style={{ color: 'var(--tag-orange-text, #FA591D)' }}>{summary?.medium ?? 0}</div>
               <div className="l">Medium priority</div>
             </div>
             <div className="kpi">
-              <div className="v" style={{ color: 'var(--secondaryText)' }}>{low}</div>
+              <div className="v" style={{ color: 'var(--secondaryText)' }}>{summary?.low ?? 0}</div>
               <div className="l">Low priority</div>
             </div>
           </div>
@@ -102,7 +113,17 @@ export function SavedPriorityListPage() {
             </tbody>
           </table>
         </div>
-        <p className="note mt16">{rows.length > 0 ? `${rows.length} SKUs` : ''}</p>
+
+        {/* Pagination */}
+        <div className="between" style={{ marginTop: 12, fontSize: 13, color: 'var(--secondaryText)' }}>
+          <span>{total.toLocaleString()} SKUs total · page {page + 1} of {Math.max(totalPages, 1)}</span>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn btn-outline" disabled={page === 0} onClick={() => setPage(0)}>«</button>
+            <button className="btn btn-outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>‹ Prev</button>
+            <button className="btn btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next ›</button>
+            <button className="btn btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>»</button>
+          </div>
+        </div>
       </div>
     </section>
   )
