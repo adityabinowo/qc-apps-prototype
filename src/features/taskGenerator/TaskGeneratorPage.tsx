@@ -60,6 +60,19 @@ function resolveHubId(locationId: string, hubId: string, hubs: { id: string; nam
   return hubId
 }
 
+function excelSerialToDate(raw: unknown): string {
+  if (raw === null || raw === undefined || raw === '') return ''
+  if (raw instanceof Date) return (raw as Date).toISOString().slice(0, 10)
+  const s = String(raw).trim()
+  if (!s) return ''
+  // Excel date serials for modern dates are 4-5 digit numbers (e.g. 46211.00013…)
+  if (/^\d{4,5}(\.\d+)?$/.test(s)) {
+    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(parseFloat(s)) * 86400000)
+    return d.toISOString().slice(0, 10)
+  }
+  return s
+}
+
 function parseInventory(file: File): Promise<InvRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -78,7 +91,7 @@ function parseInventory(file: File): Promise<InvRow[]> {
             soh: Number(r['stock'] ?? r['soh'] ?? r['SOH'] ?? 0),
             // Real export uses 'rack_name' for SLOC
             sloc: String(r['rack_name'] ?? r['sloc'] ?? r['SLOC'] ?? '').trim(),
-            expiry_date: String(r['expiry_date'] ?? r['Expiry Date'] ?? '').trim(),
+            expiry_date: excelSerialToDate(r['expiry_date'] ?? r['Expiry Date'] ?? ''),
           }))
           .filter(r => r.location_id !== '' && r.product_id !== '' && r.soh > 0)
         resolve(rows)
