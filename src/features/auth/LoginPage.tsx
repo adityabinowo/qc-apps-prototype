@@ -7,6 +7,7 @@ const MOCK_HUBS: HubInterface[] = [
   { id: 'hub-kemang', name: 'Hub Kemang', location: 'South Jakarta' },
   { id: 'hub-tebet', name: 'Hub Tebet', location: 'South Jakarta' },
   { id: 'hub-pancoran', name: 'Hub Pancoran', location: 'South Jakarta' },
+  { id: 'hub-salemba', name: 'Hub Salemba', location: 'Jakarta Pusat' },
 ]
 
 const MOCK_USERS: UserInterface[] = [
@@ -14,6 +15,8 @@ const MOCK_USERS: UserInterface[] = [
   { id: 'user-px-1', name: 'Budi K', email: 'px.quality@astronauts.id', role: 'px', hub_id: 'hub-kemang' },
   { id: 'user-officer-1', name: 'Dani A', email: 'officer1@astronauts.id', role: 'officer', hub_id: 'hub-kemang' },
   { id: 'user-officer-2', name: 'Sari W', email: 'officer2@astronauts.id', role: 'officer', hub_id: 'hub-tebet' },
+  { id: 'user-spv-sal', name: 'Tara M', email: 'spv.salemba@astronauts.id', role: 'spv', hub_id: 'hub-salemba' },
+  { id: 'user-officer-sal', name: 'Joko P', email: 'officer.salemba@astronauts.id', role: 'officer', hub_id: 'hub-salemba' },
 ]
 
 const ROLE_LABELS: Record<RoleType, string> = {
