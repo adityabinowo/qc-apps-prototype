@@ -168,7 +168,10 @@ export function TaskGeneratorPage() {
       setTimeout(() => setPhase('done'), 400)
     } catch (err) {
       setPhase('idle')
-      setParseError(err instanceof Error ? err.message : 'Generation failed.')
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? JSON.stringify(err)
+      setParseError(`Generation failed: ${msg}`)
     }
   }
 
