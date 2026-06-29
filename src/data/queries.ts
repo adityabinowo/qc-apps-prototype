@@ -239,13 +239,13 @@ export async function fetchLevelingChangelog(skuId: string): Promise<LevelingCha
 
 // ── Tasks (with overdue detection) ───────────────────────────────────────────
 
-export async function fetchTasksWithOverdue(hubId?: string): Promise<(TaskInterface & { stock?: { name: string; category: string } })[]> {
-  let q = supabase.from('tasks').select('*, stock(name,category)').order('deadline')
+export async function fetchTasksWithOverdue(hubId?: string): Promise<(TaskInterface & { master_leveling?: { name: string; category: string } })[]> {
+  let q = supabase.from('tasks').select('*, master_leveling(name,category)').order('deadline')
   if (hubId) q = q.eq('hub_id', hubId)
   const { data, error } = await q
   if (error) throw error
   const now = new Date()
-  return ((data ?? []) as (TaskInterface & { stock?: { name: string; category: string } })[]).map(t => ({
+  return ((data ?? []) as (TaskInterface & { master_leveling?: { name: string; category: string } })[]).map(t => ({
     ...t,
     status: (t.status !== 'Done' && new Date(t.deadline) < now ? 'Overdue' : t.status) as TaskInterface['status'],
   }))

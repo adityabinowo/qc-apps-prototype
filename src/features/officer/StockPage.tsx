@@ -1,11 +1,11 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+﻿import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchStock } from '../../data/queries'
 import { samplingQty } from '../../lib/rules'
 import type { TaskInterface } from '../../lib/types'
 
 export function StockPage() {
-  const { state } = useLocation() as { state?: { task: TaskInterface & { stock?: { name: string; category: string } } } }
+  const { state } = useLocation() as { state?: { task: TaskInterface & { master_leveling?: { name: string; category: string } } } }
   const navigate = useNavigate()
   const { data: stocks = [] } = useQuery({ queryKey: ['stock'], queryFn: () => fetchStock() })
 
@@ -27,7 +27,7 @@ export function StockPage() {
       <div style={{ background: '#291D80', color: '#fff', padding: '16px 20px 14px' }}>
         <button onClick={() => navigate('/app/officer/inbox')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer', marginBottom: 4, padding: 0 }}>← Back</button>
         <div style={{ fontSize: 11, opacity: 0.7 }}>Open Task</div>
-        <div style={{ fontSize: 18, fontWeight: 800 }}>{task.stock?.name ?? task.sku_id}</div>
+        <div style={{ fontSize: 18, fontWeight: 800 }}>{task.master_leveling?.name ?? task.sku_id}</div>
       </div>
       <div style={{ padding: '16px 14px 80px' }}>
         <div style={{ background: '#291D80', borderRadius: 14, padding: '20px 24px', marginBottom: 14, color: '#fff', textAlign: 'center' }}>
@@ -74,3 +74,4 @@ export function StockPage() {
     </div>
   )
 }
+
