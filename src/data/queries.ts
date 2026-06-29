@@ -462,7 +462,13 @@ export async function generateTasks(
 
   const counts: Record<string, number> = {}
 
-  await Promise.all(hubIds.map(async hubId => {
+  // Run hubs sequentially to avoid race on shared task table
+  for (const hubId of hubIds) {
+    // Clear existing generated tasks for this hub so re-runs don't hit duplicate keys
+    const { error: delErr } = await supabase
+      .from('tasks').delete().eq('hub_id', hubId).eq('source', 'generated')
+    if (delErr) throw delErr
+
     // Paginate inventory per hub past 1000
     const inv: { sku_id: string; soh_available: number; sloc: string | null; expiry_date: string | null }[] = []
     for (let from = 0; ; from += 1000) {
@@ -497,7 +503,7 @@ export async function generateTasks(
       if (error) throw error
     }
     counts[hubId] = tasks.length
-  }))
+  }
 
   return counts
 }
