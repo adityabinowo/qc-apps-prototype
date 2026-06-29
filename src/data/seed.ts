@@ -10,6 +10,7 @@ export async function seed(): Promise<void> {
       { id: 'hub-kemang', name: 'Hub Kemang', location: 'South Jakarta' },
       { id: 'hub-tebet', name: 'Hub Tebet', location: 'South Jakarta' },
       { id: 'hub-pancoran', name: 'Hub Pancoran', location: 'South Jakarta' },
+      { id: 'hub-salemba', name: 'Hub Salemba', location: 'Jakarta Pusat' },
     ])
   }
 
