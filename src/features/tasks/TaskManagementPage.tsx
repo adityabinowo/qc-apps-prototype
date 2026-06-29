@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+﻿import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
 import { Topbar } from '../../components/Topbar'
@@ -104,7 +104,7 @@ export function TaskManagementPage() {
 
   const filtered = tasks.filter(t =>
     (statusFilter === 'All' || t.status === statusFilter) &&
-    (!search || t.stock?.name?.toLowerCase().includes(search.toLowerCase())),
+    (!search || t.master_leveling?.name?.toLowerCase().includes(search.toLowerCase())),
   )
   const pendingUnassigned = filtered.filter(t => t.status === 'Pending' && !t.officer_id)
   const allSelected = pendingUnassigned.length > 0 && pendingUnassigned.every(t => selected.has(t.id))
@@ -276,7 +276,7 @@ export function TaskManagementPage() {
                       )}
                     </td>
                     <td className="muted">{t.id.slice(0, 8).toUpperCase()}</td>
-                    <td><div className="skuname">{t.stock?.name ?? t.sku_id}</div><div className="muted">{t.sku_id}</div></td>
+                    <td><div className="skuname">{t.master_leveling?.name ?? t.sku_id}</div><div className="muted">{t.sku_id}</div></td>
                     <td><span className={`lab ${t.priority === 'High' ? 'red' : t.priority === 'Medium' ? 'orange' : 'grey'}`}>{t.priority}</span></td>
                     <td>{t.level} · {t.coverage_pct}%</td>
                     <td>{officers.find(u => u.id === t.officer_id)?.name ?? <span className="muted">Unassigned</span>}</td>
@@ -399,3 +399,4 @@ export function TaskManagementPage() {
     </section>
   )
 }
+

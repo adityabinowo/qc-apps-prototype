@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -21,7 +21,7 @@ export function InboxPage() {
   const filtered = myTasks.filter(t => filter === 'All' || t.status === filter)
   const active = myTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length
 
-  const handleOpen = (task: TaskInterface & { stock?: { name: string; category: string } }) => {
+  const handleOpen = (task: TaskInterface & { master_leveling?: { name: string; category: string } }) => {
     navigate('/app/officer/stock', { state: { task } })
   }
 
@@ -54,7 +54,7 @@ export function InboxPage() {
             style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(41,29,128,0.07)', border: '1px solid #e8edf5' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#1c2540' }}>{t.stock?.name ?? t.sku_id}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#1c2540' }}>{t.master_leveling?.name ?? t.sku_id}</div>
               <span style={{ background: t.priority === 'High' ? '#ff3d5e' : t.priority === 'Medium' ? '#ff8c00' : '#8999b4', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '3px 8px' }}>{t.priority}</span>
             </div>
             <div style={{ fontSize: 11, color: '#8999b4', margin: '4px 0 8px' }}>{t.level} · {t.coverage_pct}% coverage</div>
@@ -70,3 +70,4 @@ export function InboxPage() {
     </div>
   )
 }
+
