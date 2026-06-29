@@ -70,7 +70,10 @@ function excelSerialToDate(raw: unknown): string {
     const d = new Date(Date.UTC(1899, 11, 30) + Math.round(parseFloat(s)) * 86400000)
     return d.toISOString().slice(0, 10)
   }
-  return s
+  // Keep ISO / slash date strings (YYYY-MM-DD, DD/MM/YYYY, etc.)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  // Any other value ("2", "N/A", partial numbers…) is not a valid date
+  return ''
 }
 
 function parseInventory(file: File): Promise<InvRow[]> {
