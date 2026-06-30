@@ -104,6 +104,9 @@ export interface TaskInterface {
   assigned_at?: string | null
   created_by: string
   created_at: string
+  soh?: number | null
+  sloc?: string | null
+  expiry_date?: string | null
 }
 
 export interface WmsInventoryInterface {

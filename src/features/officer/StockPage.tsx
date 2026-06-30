@@ -1,15 +1,27 @@
-﻿import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchStock } from '../../data/queries'
+import { fetchStockBySku } from '../../data/queries'
 import { samplingQty } from '../../lib/rules'
 import type { TaskInterface } from '../../lib/types'
+
+function formatDate(d: string | null | undefined): string {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
 
 export function StockPage() {
   const { state } = useLocation() as { state?: { task: TaskInterface & { master_leveling?: { name: string; category: string } } } }
   const navigate = useNavigate()
-  const { data: stocks = [] } = useQuery({ queryKey: ['stock'], queryFn: () => fetchStock() })
+  const task = state?.task
 
-  if (!state?.task) {
+  // Single-row lookup bypasses the 1000-row cap of fetchStock().find()
+  const { data: stockRow } = useQuery({
+    queryKey: ['stock_sku', task?.sku_id],
+    queryFn: () => fetchStockBySku(task!.sku_id),
+    enabled: !!task,
+  })
+
+  if (!task) {
     return (
       <div style={{ padding: 32, fontFamily: 'Montserrat,sans-serif' }}>
         <p>No task selected.</p>
@@ -18,9 +30,24 @@ export function StockPage() {
     )
   }
 
-  const task = state.task
-  const stock = stocks.find(s => s.sku_id === task.sku_id)
-  const sampleQty = stock ? samplingQty(task.coverage_pct, stock.soh) : 0
+  // Task fields first, stock table as fallback
+  const soh = task.soh ?? stockRow?.soh ?? 0
+  const sloc = task.sloc ?? stockRow?.sloc ?? ''
+  const expiry = task.expiry_date ?? stockRow?.last_ed ?? null
+  const category = task.master_leveling?.category ?? stockRow?.category ?? '—'
+  const sampleQty = samplingQty(task.coverage_pct, soh)
+
+  const daysToExpiry = expiry ? Math.ceil((new Date(expiry).getTime() - Date.now()) / 86400000) : null
+  const nearExpiry = daysToExpiry !== null && daysToExpiry >= 0 && daysToExpiry <= 7
+  const hasInfo = soh > 0 || !!stockRow
+  const showInstructions = !!task.instructions && !task.instructions.startsWith('sloc:')
+
+  const InfoRow = ({ label, value, extra }: { label: string; value: string; extra?: React.ReactNode }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f0f3f8', fontSize: 13 }}>
+      <span style={{ color: '#8999b4' }}>{label}</span>
+      <span style={{ fontWeight: 600, color: '#1c2540', display: 'flex', alignItems: 'center', gap: 6 }}>{value}{extra}</span>
+    </div>
+  )
 
   return (
     <div style={{ background: '#F6F8FB', minHeight: '100vh', fontFamily: 'Montserrat,sans-serif' }}>
@@ -29,44 +56,52 @@ export function StockPage() {
         <div style={{ fontSize: 11, opacity: 0.7 }}>Open Task</div>
         <div style={{ fontSize: 18, fontWeight: 800 }}>{task.master_leveling?.name ?? task.sku_id}</div>
       </div>
+
       <div style={{ padding: '16px 14px 80px' }}>
         <div style={{ background: '#291D80', borderRadius: 14, padding: '20px 24px', marginBottom: 14, color: '#fff', textAlign: 'center' }}>
           <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>Sampling target</div>
           <div style={{ fontSize: 36, fontWeight: 900 }}>{sampleQty} <span style={{ fontSize: 16, opacity: 0.8 }}>pcs</span></div>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>of {stock?.soh ?? '—'} SOH · {task.level} · {task.coverage_pct}% coverage</div>
+          <div style={{ fontSize: 12, opacity: 0.7 }}>of {soh || '—'} SOH · {task.level} · {task.coverage_pct}% coverage</div>
         </div>
+
         <div style={{ background: '#fff', borderRadius: 12, padding: '16px', marginBottom: 10, border: '1px solid #e8edf5' }}>
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12 }}>📦 Stock Info</div>
-          {stock ? (
+          {hasInfo ? (
             <>
-              {[
-                ['SKU ID', stock.sku_id],
-                ['Category', stock.category],
-                ['SLOC', stock.sloc],
-                ['Stock on Hand', String(stock.soh)],
-                ['Status', stock.stock_status],
-                ['Level', `${task.level} · ${task.coverage_pct}%`],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f0f3f8', fontSize: 13 }}>
-                  <span style={{ color: '#8999b4' }}>{k}</span>
-                  <span style={{ fontWeight: 600, color: '#1c2540' }}>{v}</span>
-                </div>
-              ))}
+              <InfoRow label="SKU ID" value={task.sku_id} />
+              <InfoRow label="Category" value={category} />
+              <InfoRow label="SLOC" value={sloc || '—'} />
+              <InfoRow
+                label="Expiry date"
+                value={formatDate(expiry)}
+                extra={nearExpiry ? <span style={{ background: '#FFF3CD', color: '#856404', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>SOON</span> : undefined}
+              />
+              <InfoRow label="Stock on Hand" value={String(soh)} />
+              {stockRow && <InfoRow label="Status" value={stockRow.stock_status} />}
+              <InfoRow label="Level" value={`${task.level} · ${task.coverage_pct}%`} />
             </>
           ) : (
-            <div style={{ color: '#8999b4', fontSize: 13 }}>Stock info not available</div>
+            <div style={{ color: '#8999b4', fontSize: 13 }}>Stock info not available for this SKU at this hub.</div>
           )}
         </div>
-        {task.instructions && (
+
+        {showInstructions && (
           <div style={{ background: '#fff', borderRadius: 12, padding: '16px', marginBottom: 10, border: '1px solid #e8edf5' }}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>📋 Instructions</div>
             <p style={{ fontSize: 12, color: '#5a6a84', margin: 0 }}>{task.instructions}</p>
           </div>
         )}
+
+        {soh <= 0 && (
+          <div style={{ background: '#FFF3CD', borderRadius: 10, padding: '10px 14px', marginBottom: 10, fontSize: 12, color: '#856404' }}>
+            No available stock for this SKU at this hub.
+          </div>
+        )}
+
         <button
-          onClick={() => navigate('/app/officer/step1', { state: { task, stock, sampleQty } })}
-          disabled={!stock}
-          style={{ width: '100%', background: '#291D80', color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}
+          onClick={() => navigate('/app/officer/step1', { state: { task, stock: { sku_id: task.sku_id, soh, sloc, expiry_date: expiry, category }, sampleQty } })}
+          disabled={soh <= 0}
+          style={{ width: '100%', background: '#291D80', color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 15, fontWeight: 700, cursor: soh > 0 ? 'pointer' : 'not-allowed', marginTop: 8, opacity: soh <= 0 ? 0.6 : 1 }}
         >
           Start Inspection →
         </button>
@@ -74,4 +109,3 @@ export function StockPage() {
     </div>
   )
 }
-

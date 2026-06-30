@@ -42,6 +42,12 @@ export async function fetchStock(hubId?: string): Promise<StockInterface[]> {
   return data as StockInterface[]
 }
 
+export async function fetchStockBySku(skuId: string): Promise<StockInterface | null> {
+  const { data, error } = await supabase.from('stock').select('*').eq('sku_id', skuId).maybeSingle()
+  if (error) throw error
+  return data as StockInterface | null
+}
+
 // ── Master Leveling ───────────────────────────────────────────────────────────
 
 export async function fetchMasterLeveling(): Promise<MasterLevelingInterface[]> {
@@ -493,7 +499,10 @@ export async function generateTasks(
           sku_id: r.sku_id, hub_id: hubId, officer_id: null,
           priority: p.priority ?? 'Low', level, coverage_pct: coverageForLevel(level),
           deadline: deadline.toISOString(),
-          instructions: `sloc:${r.sloc ?? ''} exp:${r.expiry_date ?? ''}`,
+          soh: r.soh_available,
+          sloc: r.sloc ?? '',
+          expiry_date: r.expiry_date ?? null,
+          instructions: '',
           status: 'Pending' as const, source: 'generated' as const, created_by: actor,
         }
       })
