@@ -5,7 +5,7 @@ import { Topbar } from '../../components/Topbar'
 import { Modal } from '../../components/Modal'
 import { useAuth } from '../../context/AuthContext'
 import {
-  fetchTasksWithOverdue, createTask, fetchStock, fetchUsers,
+  fetchTasksWithOverdue, createTask, fetchUsers,
   fetchMasterLeveling, bulkInsertTasks, assignOfficerBulk,
 } from '../../data/queries'
 import { coverageForLevel } from '../../lib/rules'
@@ -77,13 +77,11 @@ export function TaskManagementPage() {
   const bulkFileRef = useRef<HTMLInputElement>(null)
 
   const { data: tasks = [], isLoading } = useQuery({ queryKey: ['tasks', hubId], queryFn: () => fetchTasksWithOverdue(hubId) })
-  const { data: stock = [] } = useQuery({ queryKey: ['stock'], queryFn: () => fetchStock() })
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: fetchUsers })
   const { data: leveling = [] } = useQuery({ queryKey: ['leveling'], queryFn: fetchMasterLeveling })
   const officers = users.filter(u => u.role === 'officer')
 
   const levelingMap = new Map(leveling.map(l => [l.sku_id, l]))
-  const stockMap = new Map(stock.map(s => [s.sku_id, s]))
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -183,13 +181,12 @@ export function TaskManagementPage() {
     try {
       const rows = await parseBulkFile(file)
       if (rows.length === 0) { setBulkError('No valid rows found (need product_id and hub_id).'); return }
-      // Enrich from master_leveling and stock
+      // Enrich from master_leveling
       const enriched = rows.map(r => {
         const lv = levelingMap.get(r.product_id)
-        const st = stockMap.get(r.product_id)
         return {
           ...r,
-          name: st?.name ?? lv?.name,
+          name: lv?.name,
           priority: lv?.priority ?? 'Low' as PriorityType,
           level: lv?.level ?? 'LV1' as LevelType,
           coverage_pct: lv?.coverage_pct ?? 20,
@@ -308,7 +305,7 @@ export function TaskManagementPage() {
           <label>SKU <span className="req">*</span></label>
           <select className="inp fullw" value={form.sku_id} onChange={e => setForm(f => ({ ...f, sku_id: e.target.value }))}>
             <option value="">Select SKU…</option>
-            {stock.map(s => <option key={s.sku_id} value={s.sku_id}>{s.name} ({s.sku_id})</option>)}
+            {leveling.map(l => <option key={l.sku_id} value={l.sku_id}>{l.name} ({l.sku_id})</option>)}
           </select>
         </div>
         <div className="grid2">

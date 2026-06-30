@@ -42,10 +42,13 @@ export async function fetchStock(hubId?: string): Promise<StockInterface[]> {
   return data as StockInterface[]
 }
 
-export async function fetchStockBySku(skuId: string): Promise<StockInterface | null> {
-  const { data, error } = await supabase.from('stock').select('*').eq('sku_id', skuId).maybeSingle()
+export async function fetchWmsInventoryBySku(skuId: string, hubId: string): Promise<WmsInventoryInterface | null> {
+  const { data, error } = await supabase
+    .from('wms_inventory').select('*')
+    .eq('sku_id', skuId).eq('hub_id', hubId)
+    .order('uploaded_at', { ascending: false }).limit(1)
   if (error) throw error
-  return data as StockInterface | null
+  return ((data ?? []) as WmsInventoryInterface[])[0] ?? null
 }
 
 // ── Master Leveling ───────────────────────────────────────────────────────────
