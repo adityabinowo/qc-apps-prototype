@@ -261,7 +261,10 @@
 ### T-GAP-7 SPV verifies an inspection that's already verified
 - **Scenario:** SPV selects same inspection twice in verification panel
 - **Expected:** Second save creates another verification row (no guard)
-- **Verdict:** Gap — prototype allows duplicate verifications. Production fix: filter out RE_INSPECTED state from verification list.
+- **Verdict:** Partially handled.
+  - ✅ Server-side: `fetchCompletedInspections` (`src/data/queries.ts`) whitelists `lifecycle_state IN ('COMPLETED', 'PENDING_SORT', 'PENDING_APPROVAL')`. Once a verification completes and the inspection moves to `RE_INSPECTED`, it drops out of the candidate list.
+  - ⚠ Remaining race window: two SPVs (or one SPV double-clicking Save) can both submit before the lifecycle update lands → duplicate `verifications` rows + duplicate `status_changes` on mismatch. Production fix: (a) disable Save while mutation pending using `useMutation`'s `isPending`, and (b) add an idempotency guard in `createVerification` that returns the existing row if one already exists for `inspection_id`.
+  - ⚠ Separate state-machine concern: verification transitions `COMPLETED|PENDING_SORT|PENDING_APPROVAL → RE_INSPECTED` directly, but `rules.ts::nextStates()` only allows `SELECTED → RE_INSPECTED`. Tracked separately.
 
 ### T-GAP-8 Role visibility: Officer sees admin nav
 - **Scenario:** Officer manually navigates to `/app/dashboard`
