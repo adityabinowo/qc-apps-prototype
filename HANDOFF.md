@@ -175,10 +175,10 @@ The improvements plan is at `plan-improvements.md` in the repo root. Key remaini
 | 7 | Post-generation summary per hub | ✅ Done |
 | 8 | Bulk upload in Task Management | ✅ Done |
 | 9 | Bulk-assign officer to pending tasks | ✅ Done |
-| 10 | Split dashboard into Main + Verification pipelines | ⬜ Not started |
+| 10 | Split dashboard into Main + Verification pipelines | ✅ Done |
 | 11 | Rename "Phase 2" sidebar group → "QC Task Generator" | ✅ Done |
 
-**Item 10 is the main remaining improvement** from the original plan: the Dashboard currently shows one unified lifecycle strip. It should split into two labeled strips — Main Pipeline and Verification Pipeline (see `plan-improvements.md` §2 item 10 for details).
+All 11 original `plan-improvements.md` items are now done. Item 10's two-strip split (`MAIN_STEPS`/`VERIF_STEPS` in `DashboardPage.tsx`) pre-dates this note being fixed — this table just hadn't been updated. As of 2026-07-16, the underlying `lifecycle_state` wiring that feeds those buckets (Approved/Rejected/Mismatch→approval/Selected) was also fixed — see the "task In Progress / approval lifecycle" work below — so the split dashboard now shows real numbers, not just zeros.
 
 ---
 
