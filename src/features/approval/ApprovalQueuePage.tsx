@@ -16,7 +16,7 @@ function ageLabel(submitted: string) {
 export function ApprovalQueuePage() {
   const { auth } = useAuth()
   const qc = useQueryClient()
-  const { data: pending = [], isLoading } = useQuery({ queryKey: ['approvals'], queryFn: fetchPendingApprovals, refetchInterval: 30000 })
+  const { data: pending = [], isLoading } = useQuery({ queryKey: ['approvals'], queryFn: fetchPendingApprovals, staleTime: 0, refetchInterval: 30000 })
   const [selected, setSelected] = useState<any | null>(null)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')

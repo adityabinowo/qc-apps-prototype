@@ -34,6 +34,7 @@ export function DashboardPage() {
   const { data: kpis, isLoading } = useQuery({
     queryKey: ['dashboard_kpis'],
     queryFn: fetchDashboardKpis,
+    staleTime: 0,
     refetchInterval: 5 * 60 * 1000,
   })
   const { data: hubs = [] } = useQuery({ queryKey: ['hubs'], queryFn: fetchHubs })

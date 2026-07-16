@@ -22,6 +22,8 @@ export function SpvVerificationPage() {
   const { data: inspections = [], isLoading } = useQuery({
     queryKey: ['completed_inspections', auth.hub?.id],
     queryFn: () => fetchCompletedInspections(auth.hub?.id),
+    staleTime: 0,
+    refetchInterval: 30000,
   })
 
   const [selected, setSelected] = useState<any | null>(null)
