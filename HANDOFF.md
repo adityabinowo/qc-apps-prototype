@@ -79,6 +79,29 @@ ALTER TABLE status_changes ADD CONSTRAINT status_changes_sku_id_fkey FOREIGN KEY
 
 Also found live 2026-07-16: uploading a photo during Submit Inspection could fail with Supabase Storage `400 InvalidKey` because the storage object key embedded the raw camera file name verbatim (`${hubId}/${Date.now()}-${file.name}`), and phone-exported file names can contain characters Storage rejects (spaces, unicode ellipses, etc). Fixed in `src/lib/image.ts` — added `safePhotoPath()` which builds the key from hub id + timestamp + index + a sanitized extension only, never the original name. No migration needed, code-only fix, covered by `src/lib/image.test.ts`.
 
+### New: `inspection-photos` bucket has no Storage RLS policy → `403 Unauthorized`
+
+Found live 2026-07-16, after the two fixes above: with the FK migration applied and the file-name bug fixed, photo upload now fails with `403 {"error":"Unauthorized","message":"new row violates row-level security policy"}`. Root cause: the bucket's "Public: true" setting only controls whether object URLs are downloadable without a signed URL — it does **not** grant upload access. `storage.objects` has RLS enabled by default with zero policies, so every insert/select/update against it is denied until policies exist, and this project's setup docs (`README.md`, `plan.md`) never mentioned adding one.
+
+**This was already silently swallowed by design** — `InspectionStep2Page.tsx`'s upload loop doesn't throw on a failed upload (`T-GAP-4` in `docs/test-scenarios.md`: "Upload fails silently, inspection still saves"). That's fine for a missing-bucket case, but for a food-safety QC app it means a defect photo (moldy meat, etc.) can vanish with zero indication to the officer. Two changes:
+1. **Code (done):** the upload loop now counts failures and `ResultPage.tsx` shows a warning banner ("N photos failed to upload… notify your supervisor") when any upload fails, instead of pretending everything saved.
+2. **Supabase config (you need to run this):** add RLS policies for the `inspection-photos` bucket. Now documented in `supabase/schema.sql`:
+
+```sql
+DROP POLICY IF EXISTS "inspection-photos anon insert" ON storage.objects;
+CREATE POLICY "inspection-photos anon insert"
+  ON storage.objects FOR INSERT TO public
+  WITH CHECK (bucket_id = 'inspection-photos');
+DROP POLICY IF EXISTS "inspection-photos anon select" ON storage.objects;
+CREATE POLICY "inspection-photos anon select"
+  ON storage.objects FOR SELECT TO public
+  USING (bucket_id = 'inspection-photos');
+DROP POLICY IF EXISTS "inspection-photos anon update" ON storage.objects;
+CREATE POLICY "inspection-photos anon update"
+  ON storage.objects FOR UPDATE TO public
+  USING (bucket_id = 'inspection-photos');
+```
+
 ---
 
 ## Key Architecture Decisions & Quirks

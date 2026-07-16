@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { DecisionResultInterface } from '../../lib/rules'
 
 export function ResultPage() {
-  const { state } = useLocation() as { state?: { inspection: any; decision: DecisionResultInterface; ncPct: number; skuName: string } }
+  const { state } = useLocation() as { state?: { inspection: any; decision: DecisionResultInterface; ncPct: number; skuName: string; photoUploadFailures?: number } }
   const navigate = useNavigate()
 
   if (!state) {
@@ -14,7 +14,7 @@ export function ResultPage() {
     )
   }
 
-  const { decision, ncPct, skuName, inspection } = state
+  const { decision, ncPct, skuName, inspection, photoUploadFailures } = state
   const isGood = decision.band === 'Accepted'
   const isCond = decision.band === 'Conditionally Accepted'
   const bg = isGood ? '#E6F9EF' : isCond ? '#FFF8E6' : '#FFF0F3'
@@ -33,6 +33,11 @@ export function ResultPage() {
           <div style={{ fontSize: 20, fontWeight: 800, color, marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 13, color, opacity: 0.8, marginTop: 8 }}>{decision.recommendedAction}</div>
         </div>
+        {!!photoUploadFailures && (
+          <div style={{ background: '#FFF0F3', border: '1px solid #ffc7d2', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: '#cc1738', fontWeight: 600 }}>
+            ⚠️ {photoUploadFailures} photo{photoUploadFailures > 1 ? 's' : ''} failed to upload. The inspection was saved, but this evidence is missing — notify your supervisor.
+          </div>
+        )}
         <div style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #e8edf5', marginBottom: 12 }}>
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>📊 Summary</div>
           {[

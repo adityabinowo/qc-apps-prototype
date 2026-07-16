@@ -53,14 +53,18 @@ export function InspectionStep2Page() {
 
       setUploading(true)
       const photoUrls: string[] = []
+      let photoUploadFailures = 0
       const uploadTs = Date.now()
       for (const [i, f] of photos.entries()) {
         const compressed = await compressToUnder1MB(f)
         const path = safePhotoPath(auth.hub!.id, f.name, i, uploadTs)
-        const { data: up } = await supabase.storage.from('inspection-photos').upload(path, compressed, { upsert: true })
+        const { data: up, error: upErr } = await supabase.storage.from('inspection-photos').upload(path, compressed, { upsert: true })
         if (up) {
           const { data: pub } = supabase.storage.from('inspection-photos').getPublicUrl(up.path)
           photoUrls.push(pub.publicUrl)
+        } else {
+          photoUploadFailures++
+          console.error('Photo upload failed:', upErr)
         }
       }
       setUploading(false)
@@ -112,7 +116,7 @@ export function InspectionStep2Page() {
       }
 
       navigate('/app/officer/result', {
-        state: { inspection: { ...inspection, lifecycle_state: nextState }, decision, ncPct, skuName: stock.name },
+        state: { inspection: { ...inspection, lifecycle_state: nextState }, decision, ncPct, skuName: stock.name, photoUploadFailures },
       })
     },
   })
