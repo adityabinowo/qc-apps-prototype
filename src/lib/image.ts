@@ -1,3 +1,11 @@
+/** Build a Supabase Storage-safe object key. Never embeds the original file name —
+ *  phone camera exports can contain spaces, unicode ellipses, or other characters
+ *  that Storage rejects with "InvalidKey". */
+export function safePhotoPath(hubId: string, fileName: string, index: number, ts = Date.now()): string {
+  const ext = (fileName.match(/\.([a-zA-Z0-9]+)$/)?.[1] || 'jpg').toLowerCase()
+  return `${hubId}/${ts}-${index}.${ext}`
+}
+
 export async function compressToUnder1MB(file: File): Promise<Blob> {
   const MAX = 900 * 1024
   if (file.size <= MAX) return file

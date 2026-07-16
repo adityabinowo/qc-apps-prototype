@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS stock (
 
 -- ── master_leveling ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS master_leveling (
-  sku_id        TEXT PRIMARY KEY REFERENCES stock(sku_id),
+  sku_id        TEXT PRIMARY KEY,
   name          TEXT NOT NULL,
   product_id    TEXT NOT NULL,
   category      TEXT NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS priority_list (
 -- ── tasks ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tasks (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sku_id        TEXT REFERENCES stock(sku_id),
+  sku_id        TEXT REFERENCES master_leveling(sku_id),
   hub_id        TEXT REFERENCES hubs(id),
   officer_id    TEXT REFERENCES users(id),
   priority      TEXT NOT NULL CHECK (priority IN ('Low','Medium','High')),
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS inspections (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id             UUID REFERENCES tasks(id),
-  sku_id              TEXT REFERENCES stock(sku_id),
+  sku_id              TEXT REFERENCES master_leveling(sku_id),
   officer_id          TEXT REFERENCES users(id),
   hub_id              TEXT REFERENCES hubs(id),
   soh                 INTEGER NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS inspection_photos (
 CREATE TABLE IF NOT EXISTS status_changes (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   inspection_id  UUID REFERENCES inspections(id),
-  sku_id         TEXT REFERENCES stock(sku_id),
+  sku_id         TEXT REFERENCES master_leveling(sku_id),
   hub_id         TEXT REFERENCES hubs(id),
   old_status     TEXT NOT NULL,
   new_status     TEXT NOT NULL,

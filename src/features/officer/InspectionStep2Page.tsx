@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { createInspection, updateInspectionLifecycle } from '../../data/queries'
 import { nonConformityPct, decide } from '../../lib/rules'
-import { compressToUnder1MB } from '../../lib/image'
+import { compressToUnder1MB, safePhotoPath } from '../../lib/image'
 import { supabase } from '../../lib/supabase'
 import type { TaskInterface, StockInterface } from '../../lib/types'
 
@@ -53,9 +53,10 @@ export function InspectionStep2Page() {
 
       setUploading(true)
       const photoUrls: string[] = []
-      for (const f of photos) {
+      const uploadTs = Date.now()
+      for (const [i, f] of photos.entries()) {
         const compressed = await compressToUnder1MB(f)
-        const path = `${auth.hub!.id}/${Date.now()}-${f.name}`
+        const path = safePhotoPath(auth.hub!.id, f.name, i, uploadTs)
         const { data: up } = await supabase.storage.from('inspection-photos').upload(path, compressed, { upsert: true })
         if (up) {
           const { data: pub } = supabase.storage.from('inspection-photos').getPublicUrl(up.path)
