@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchStockBySku } from '../../data/queries'
+import { fetchWmsInventoryBySku } from '../../data/queries'
 import { samplingQty } from '../../lib/rules'
 import type { TaskInterface } from '../../lib/types'
 
@@ -14,10 +14,10 @@ export function StockPage() {
   const navigate = useNavigate()
   const task = state?.task
 
-  // Single-row lookup bypasses the 1000-row cap of fetchStock().find()
-  const { data: stockRow } = useQuery({
-    queryKey: ['stock_sku', task?.sku_id],
-    queryFn: () => fetchStockBySku(task!.sku_id),
+  // Read from wms_inventory (most recent upload) — bypasses the legacy stock table
+  const { data: wmsRow } = useQuery({
+    queryKey: ['wms_sku', task?.sku_id, task?.hub_id],
+    queryFn: () => fetchWmsInventoryBySku(task!.sku_id, task!.hub_id),
     enabled: !!task,
   })
 
@@ -30,16 +30,16 @@ export function StockPage() {
     )
   }
 
-  // Task fields first, stock table as fallback
-  const soh = task.soh ?? stockRow?.soh ?? 0
-  const sloc = task.sloc ?? stockRow?.sloc ?? ''
-  const expiry = task.expiry_date ?? stockRow?.last_ed ?? null
-  const category = task.master_leveling?.category ?? stockRow?.category ?? '—'
+  // Task fields first (set by generateTasks after DB migration), wms_inventory as fallback
+  const soh = task.soh ?? wmsRow?.soh_available ?? 0
+  const sloc = task.sloc ?? wmsRow?.sloc ?? ''
+  const expiry = task.expiry_date ?? wmsRow?.expiry_date ?? null
+  const category = task.master_leveling?.category ?? '—'
   const sampleQty = samplingQty(task.coverage_pct, soh)
 
   const daysToExpiry = expiry ? Math.ceil((new Date(expiry).getTime() - Date.now()) / 86400000) : null
   const nearExpiry = daysToExpiry !== null && daysToExpiry >= 0 && daysToExpiry <= 7
-  const hasInfo = soh > 0 || !!stockRow
+  const hasInfo = soh > 0 || !!wmsRow
   const showInstructions = !!task.instructions && !task.instructions.startsWith('sloc:')
 
   const InfoRow = ({ label, value, extra }: { label: string; value: string; extra?: React.ReactNode }) => (
@@ -77,7 +77,6 @@ export function StockPage() {
                 extra={nearExpiry ? <span style={{ background: '#FFF3CD', color: '#856404', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>SOON</span> : undefined}
               />
               <InfoRow label="Stock on Hand" value={String(soh)} />
-              {stockRow && <InfoRow label="Status" value={stockRow.stock_status} />}
               <InfoRow label="Level" value={`${task.level} · ${task.coverage_pct}%`} />
             </>
           ) : (
