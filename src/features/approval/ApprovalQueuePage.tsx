@@ -95,12 +95,6 @@ export function ApprovalQueuePage() {
                 <div>
                   <h5>Current — WIMS</h5>
                   <span className="lab green">{selected.old_status}</span>
-                  {selected.stock && (
-                    <div style={{ marginTop: 10 }}>
-                      {selected.stock.sloc && <div className="kv"><div className="k">SLOC</div><div className="val">{selected.stock.sloc}</div></div>}
-                      {selected.stock.soh !== undefined && <div className="kv"><div className="k">Stock on Hand</div><div className="val">{selected.stock.soh}</div></div>}
-                    </div>
-                  )}
                 </div>
                 <div>
                   <h5>Reported — QA Officer</h5>

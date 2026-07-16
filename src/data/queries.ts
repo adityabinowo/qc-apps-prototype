@@ -265,7 +265,7 @@ export async function fetchTasksWithOverdue(hubId?: string): Promise<(TaskInterf
 export async function fetchPendingApprovals(): Promise<unknown[]> {
   const { data, error } = await supabase
     .from('status_changes')
-    .select('*, inspections(nc_pct, defect_reasons, defect_desc, inspection_photos(url)), stock(name,category,sloc,soh)')
+    .select('*, inspections(nc_pct, defect_reasons, defect_desc, inspection_photos(url)), stock:master_leveling(name,category)')
     .eq('state', 'Pending')
     .order('submitted_at')
   if (error) throw error
@@ -287,7 +287,7 @@ export async function rejectStatusChange(id: string, reason: string, decidedBy: 
 export async function fetchAuditLog(): Promise<unknown[]> {
   const { data, error } = await supabase
     .from('status_changes')
-    .select('*, stock(name)')
+    .select('*, stock:master_leveling(name)')
     .in('state', ['Approved', 'Rejected'])
     .order('decided_at', { ascending: false })
   if (error) throw error
@@ -299,7 +299,7 @@ export async function fetchAuditLog(): Promise<unknown[]> {
 export async function fetchCompletedInspections(hubId?: string): Promise<unknown[]> {
   let q = supabase
     .from('inspections')
-    .select('*, stock(name,category)')
+    .select('*, stock:master_leveling(name,category)')
     .in('lifecycle_state', ['COMPLETED', 'PENDING_SORT', 'PENDING_APPROVAL'])
   if (hubId) q = q.eq('hub_id', hubId)
   const { data, error } = await q.order('created_at', { ascending: false })
