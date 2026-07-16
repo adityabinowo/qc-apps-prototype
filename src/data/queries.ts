@@ -149,6 +149,11 @@ export async function fetchPendingStatusChanges(): Promise<StatusChangeInterface
   return data as StatusChangeInterface[]
 }
 
+export async function updateStatusChangeQty(inspectionId: string, qty: number): Promise<void> {
+  const { error } = await supabase.from('status_changes').update({ qty_changed: qty }).eq('inspection_id', inspectionId)
+  if (error) throw error
+}
+
 export async function decideStatusChange(
   id: string,
   state: 'Approved' | 'Rejected',
