@@ -330,6 +330,11 @@ export async function fetchDashboardKpis() {
     const state = (i as { lifecycle_state: string }).lifecycle_state
     lifecycle[state] = (lifecycle[state] ?? 0) + 1
   }
+  // "Selected" isn't a real lifecycle_state (writing one would pull inspections out of
+  // fetchCompletedInspections's own queue, which reads these same states) — it's the count
+  // of inspections still awaiting SPV re-inspection. Excludes plain COMPLETED (Accepted, no
+  // defects) — that's the officer's own "no change needed" outcome, not something pending SPV.
+  lifecycle['SELECTED'] = (lifecycle['PENDING_SORT'] ?? 0) + (lifecycle['PENDING_APPROVAL'] ?? 0)
   const verificationBands: Record<string, number> = {}
   for (const v of verifs) {
     const band = (v as { band?: string }).band
