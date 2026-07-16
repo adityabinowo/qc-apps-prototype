@@ -225,3 +225,22 @@ ALTER TABLE priority_list   DROP CONSTRAINT IF EXISTS priority_list_sku_id_fkey;
 
 -- Storage bucket: run in Supabase Dashboard > Storage > New bucket
 -- Name: inspection-photos  |  Public: true (prototype only)
+--
+-- "Public" only controls whether object URLs are downloadable without a signed
+-- URL — it does NOT grant upload access. storage.objects has RLS enabled by
+-- default with no policies, so uploads are rejected (403 "row-level security
+-- policy") until you add policies. Run these too (prototype only, anon key, no
+-- real Supabase Auth session):
+-- (CREATE POLICY has no IF NOT EXISTS — drop-then-create keeps this re-runnable)
+DROP POLICY IF EXISTS "inspection-photos anon insert" ON storage.objects;
+CREATE POLICY "inspection-photos anon insert"
+  ON storage.objects FOR INSERT TO public
+  WITH CHECK (bucket_id = 'inspection-photos');
+DROP POLICY IF EXISTS "inspection-photos anon select" ON storage.objects;
+CREATE POLICY "inspection-photos anon select"
+  ON storage.objects FOR SELECT TO public
+  USING (bucket_id = 'inspection-photos');
+DROP POLICY IF EXISTS "inspection-photos anon update" ON storage.objects;
+CREATE POLICY "inspection-photos anon update"
+  ON storage.objects FOR UPDATE TO public
+  USING (bucket_id = 'inspection-photos');
