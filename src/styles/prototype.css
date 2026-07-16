@@ -293,3 +293,52 @@ table.tbl tbody tr:last-child td{border-bottom:0;}
 .food-ic.lit{color:var(--main);opacity:1;animation:foodBlip .5s ease both,foodTwinkle 1.8s ease-in-out infinite;}
 @keyframes foodBlip{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.18);opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes foodTwinkle{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* SPV Verification — split evaluation cards (officer accuracy vs stock condition) */
+.callout{background:#fff;border:1px dashed var(--border);border-radius:10px;padding:13px 16px;margin-bottom:16px;}
+.origrow{display:flex;gap:22px;flex-wrap:wrap;}
+.origrow .k{font-size:11px;color:var(--secondaryText);font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.origrow .v{font-size:15px;color:var(--textV2);font-weight:800;margin-top:2px;}
+
+.evalcard{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;background:#fff;}
+.evalcard>header{padding:14px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);}
+.evalcard.blue>header{background:var(--mainFaded);border-left:4px solid var(--main);}
+.evalcard.amber>header{background:var(--tag-orange-bg);border-left:4px solid var(--orange);}
+.stepno{width:26px;height:26px;border-radius:50%;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 26px;}
+.evalcard.blue .stepno{background:var(--main);}
+.evalcard.amber .stepno{background:var(--orange);}
+.evalhead-t{font-size:15px;font-weight:800;color:var(--textV2);}
+.evalhead-s{font-size:12px;font-weight:600;color:var(--secondaryText);margin-top:2px;max-width:520px;}
+.evalbody{padding:18px;}
+.subject-pill{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+.subject-officer{background:#fff;color:var(--main);border:1px solid #cfe0f5;}
+.subject-stock{background:#fff;color:var(--orange);border:1px solid #ffd9bd;}
+
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+.tile{background:var(--softGrey);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.tile .v{font-size:22px;font-weight:800;color:var(--textV2);line-height:1;}
+.tile .l{font-size:11px;color:var(--secondaryText);font-weight:700;margin-top:6px;}
+
+.outcome{border-radius:10px;padding:14px 16px;margin-top:14px;}
+.outcome .calc{font-size:11px;font-weight:700;color:var(--secondaryText);}
+.outcome .big{font-size:24px;font-weight:800;margin-top:2px;}
+.outcome .act{font-size:12px;font-weight:600;margin-top:3px;}
+.outcome.g{background:var(--tag-green-bg);} .outcome.g .big,.outcome.g .act{color:var(--tag-green-tx);}
+.outcome.y{background:var(--tag-yellow-bg);} .outcome.y .big,.outcome.y .act{color:var(--tag-yellow-tx);}
+.outcome.r{background:var(--tag-red-bg);} .outcome.r .big,.outcome.r .act{color:var(--tag-red-tx);}
+
+.toggle{display:flex;gap:10px;}
+.toggle button{flex:1;border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;color:var(--secondaryText);display:flex;flex-direction:column;align-items:center;gap:3px;}
+.toggle button small{font-weight:600;font-size:11px;}
+.toggle button.match.on{background:var(--tag-green-bg);border-color:var(--success);color:var(--tag-green-tx);}
+.toggle button.mismatch.on{background:var(--tag-orange-bg);border-color:var(--orange);color:var(--orange);}
+
+/* scoped under .evalcard so the plain global .note (LoginPage, ApprovalQueuePage, etc.) is untouched */
+.evalcard .note{border-radius:8px;padding:12px 14px;font-size:12.5px;font-weight:600;display:flex;gap:9px;margin-top:14px;}
+.evalcard .note.g{background:var(--tag-green-bg);color:var(--tag-green-tx);}
+.evalcard .note.o{background:var(--tag-orange-bg);color:var(--orange);}
+
+.savebar{display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-top:4px;}
+.savepills{display:flex;gap:10px;flex-wrap:wrap;}
+.spill{border-radius:99px;padding:7px 14px;font-size:12px;font-weight:800;background:var(--tag-grey-bg);color:var(--tag-grey-tx);display:flex;align-items:center;gap:7px;}
+.spill .d{font-size:10px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.04em;}
