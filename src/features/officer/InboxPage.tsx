@@ -1,8 +1,8 @@
 ﻿import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { fetchTasksWithOverdue } from '../../data/queries'
+import { fetchTasksWithOverdue, updateTaskStatus } from '../../data/queries'
 import type { TaskInterface } from '../../lib/types'
 
 const PILL_CLS: Record<string, string> = { Pending: '#b0bec5', 'In Progress': '#5579ff', Done: '#43c78f', Overdue: '#ff3d5e' }
@@ -10,6 +10,7 @@ const PILL_CLS: Record<string, string> = { Pending: '#b0bec5', 'In Progress': '#
 export function InboxPage() {
   const { auth } = useAuth()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks', auth.hub?.id],
     queryFn: () => fetchTasksWithOverdue(auth.hub?.id),
@@ -22,6 +23,9 @@ export function InboxPage() {
   const active = myTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length
 
   const handleOpen = (task: TaskInterface & { master_leveling?: { name: string; category: string } }) => {
+    if (task.status === 'Pending') {
+      updateTaskStatus(task.id, 'In Progress').then(() => qc.invalidateQueries({ queryKey: ['tasks'] }))
+    }
     navigate('/app/officer/stock', { state: { task } })
   }
 
