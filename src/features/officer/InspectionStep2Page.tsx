@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
-import { createInspection, updateInspectionLifecycle } from '../../data/queries'
+import { createInspection, updateInspectionLifecycle, updateTaskStatus } from '../../data/queries'
 import { nonConformityPct, decide } from '../../lib/rules'
 import { compressToUnder1MB, safePhotoPath } from '../../lib/image'
 import { supabase } from '../../lib/supabase'
@@ -101,6 +101,7 @@ export function InspectionStep2Page() {
       else nextState = 'PENDING_APPROVAL'
 
       await updateInspectionLifecycle(inspection.id, nextState as any)
+      await updateTaskStatus(task.id, 'Done')
 
       if (decision.proposesStatusChange) {
         await supabase.from('status_changes').insert({
