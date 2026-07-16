@@ -58,7 +58,7 @@ export function SpvVerificationPage() {
         compliance_pct: compResult.pct,
         band: compResult.band,
       })
-      await updateInspectionLifecycle(selected.id, 'RE_INSPECTED')
+      await updateInspectionLifecycle(selected.id, matchFlag ? 'RE_INSPECTED' : 'MISMATCH_APPROVAL')
       if (!matchFlag) {
         await supabase.from('status_changes').insert({
           inspection_id: selected.id,

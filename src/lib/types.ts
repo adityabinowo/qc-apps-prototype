@@ -15,6 +15,7 @@ export type LifecycleStateType =
   | 'REJECTED'
   | 'SELECTED'
   | 'RE_INSPECTED'
+  | 'MISMATCH_APPROVAL'
 export type StatusChangeStateType = 'Pending' | 'Approved' | 'Rejected'
 export type VerificationBandType = 'PASSED' | 'PASSED_WITH_NOTE' | 'NOT_PASSED'
 export type DecisionBandType = 'Accepted' | 'Conditionally Accepted' | 'Quarantine All'

@@ -13,6 +13,11 @@ const MAIN_STEPS = [
   { key: 'REJECTED',         label: 'Rejected',             bg: 'var(--tag-red-bg)',      border: '#ffc7d2', src: 'lifecycle' },
 ]
 
+const STATE_LABELS: Record<string, string> = Object.fromEntries(
+  [...MAIN_STEPS, { key: 'RE_INSPECTED', label: 'Re-inspected (Match)' }, { key: 'MISMATCH_APPROVAL', label: 'Mismatch → approval' }]
+    .map(s => [s.key, s.label]),
+)
+
 const VERIF_STEPS = [
   { key: 'SELECTED',          label: 'Selected',              bg: '#F0EDF8',               border: '#d8cef0', src: 'lifecycle' },
   { key: 'RE_INSPECTED',      label: 'Re-inspected (Match)',  bg: 'var(--tag-green-bg)',   border: '#bce7bd', src: 'lifecycle' },
@@ -160,7 +165,7 @@ export function DashboardPage() {
                       <td>{ins.sampling_qty}/{ins.soh}</td>
                       <td>{Number(ins.nc_pct).toFixed(1)}%</td>
                       <td><span className={`lab ${ins.decision === 'Accepted' ? 'green' : ins.decision === 'Conditionally Accepted' ? 'orange' : 'red'}`}>{ins.decision}</span></td>
-                      <td><span className="lab grey">{ins.lifecycle_state}</span></td>
+                      <td><span className="lab grey">{STATE_LABELS[ins.lifecycle_state] ?? ins.lifecycle_state}</span></td>
                     </tr>
                   ))}
                 </tbody>

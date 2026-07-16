@@ -265,22 +265,24 @@ export async function fetchTasksWithOverdue(hubId?: string): Promise<(TaskInterf
 export async function fetchPendingApprovals(): Promise<unknown[]> {
   const { data, error } = await supabase
     .from('status_changes')
-    .select('*, inspections(nc_pct, defect_reasons, defect_desc, inspection_photos(url)), stock:master_leveling(name,category)')
+    .select('*, inspections(nc_pct, defect_reasons, defect_desc, qty_bad, total_defect, inspection_photos(url), verifications(match_flag, compliance_pct, band, defect_qty)), stock:master_leveling(name,category)')
     .eq('state', 'Pending')
     .order('submitted_at')
   if (error) throw error
   return data ?? []
 }
 
-export async function approveStatusChange(id: string, skuId: string, newStatus: string, decidedBy: string): Promise<void> {
+export async function approveStatusChange(id: string, skuId: string, newStatus: string, decidedBy: string, inspectionId: string): Promise<void> {
   await decideStatusChange(id, 'Approved', decidedBy)
   const { error } = await supabase.from('stock').update({ stock_status: newStatus }).eq('sku_id', skuId)
   if (error) throw error
+  await updateInspectionLifecycle(inspectionId, 'APPROVED')
   await appendAudit('status_changes', id, 'APPROVED', { skuId, newStatus }, decidedBy)
 }
 
-export async function rejectStatusChange(id: string, reason: string, decidedBy: string): Promise<void> {
+export async function rejectStatusChange(id: string, reason: string, decidedBy: string, inspectionId: string): Promise<void> {
   await decideStatusChange(id, 'Rejected', decidedBy, reason)
+  await updateInspectionLifecycle(inspectionId, 'REJECTED')
   await appendAudit('status_changes', id, 'REJECTED', { reason }, decidedBy)
 }
 

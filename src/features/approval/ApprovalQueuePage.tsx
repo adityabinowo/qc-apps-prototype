@@ -24,14 +24,19 @@ export function ApprovalQueuePage() {
   const overSla = (pending as any[]).filter(p => ageMinutes(p.submitted_at) > 15)
 
   const approve = useMutation({
-    mutationFn: () => approveStatusChange(selected!.id, selected!.sku_id, selected!.new_status, auth.user!.id),
+    mutationFn: () => approveStatusChange(selected!.id, selected!.sku_id, selected!.new_status, auth.user!.id, selected!.inspection_id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['approvals'] }); setSelected(null) },
   })
 
   const reject = useMutation({
-    mutationFn: () => rejectStatusChange(selected!.id, rejectReason, auth.user!.id),
+    mutationFn: () => rejectStatusChange(selected!.id, rejectReason, auth.user!.id, selected!.inspection_id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['approvals'] }); setSelected(null); setRejectOpen(false); setRejectReason('') },
   })
+
+  const verification = selected?.inspections?.verifications?.[0]
+  const changedQty = selected?.source === 'verification'
+    ? verification?.defect_qty
+    : selected?.inspections?.total_defect ?? selected?.inspections?.qty_bad
 
   return (
     <section className="admin active" id="adm-approval">
@@ -111,6 +116,21 @@ export function ApprovalQueuePage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <div className="smcap" style={{ marginBottom: 8 }}>Impact</div>
+                {changedQty != null && (
+                  <div className="kv"><div className="k">Available → Bad qty</div><div className="val">{changedQty}</div></div>
+                )}
+                {verification ? (
+                  <>
+                    <div className="kv"><div className="k">Officer accuracy (SPV)</div><div className="val">{verification.compliance_pct}% — {verification.band.replace(/_/g, ' ')}</div></div>
+                    <div className="kv"><div className="k">Stock condition (SPV)</div><div className="val"><span className={`lab ${verification.match_flag ? 'green' : 'orange'}`}>{verification.match_flag ? 'Match' : 'Mismatch'}</span></div></div>
+                  </>
+                ) : (
+                  <div className="kv"><div className="k">SPV verification</div><div className="val" style={{ color: 'var(--secondaryText)', fontWeight: 600 }}>Not yet verified</div></div>
+                )}
               </div>
 
               {selected.inspections?.inspection_photos?.length > 0 && (
