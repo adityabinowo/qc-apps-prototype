@@ -319,7 +319,7 @@ export async function fetchCompletedInspections(hubId?: string): Promise<unknown
 export async function fetchDashboardKpis() {
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const [inspRes, pendRes, verifRes] = await Promise.all([
-    supabase.from('inspections').select('id,lifecycle_state,hub_id,created_at,nc_pct,decision,sku_id,officer_id,sampling_qty,soh').gte('created_at', today.toISOString()),
+    supabase.from('inspections').select('id,lifecycle_state,hub_id,created_at,nc_pct,decision,sku_id,officer_id,sampling_qty,soh,verifications(band,compliance_pct,match_flag),status_changes(state,qty_changed)').gte('created_at', today.toISOString()),
     supabase.from('status_changes').select('id,submitted_at').eq('state', 'Pending'),
     supabase.from('verifications').select('compliance_pct,band'),
   ])

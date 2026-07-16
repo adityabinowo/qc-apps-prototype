@@ -13,6 +13,8 @@ const MAIN_STEPS = [
   { key: 'REJECTED',         label: 'Rejected',             bg: 'var(--tag-red-bg)',      border: '#ffc7d2', src: 'lifecycle' },
 ]
 
+const VERIF_BAND_LAB: Record<string, string> = { PASSED: 'green', PASSED_WITH_NOTE: 'yellow', NOT_PASSED: 'red' }
+
 const STATE_LABELS: Record<string, string> = Object.fromEntries(
   [...MAIN_STEPS, { key: 'RE_INSPECTED', label: 'Re-inspected (Match)' }, { key: 'MISMATCH_APPROVAL', label: 'Mismatch → approval' }]
     .map(s => [s.key, s.label]),
@@ -155,20 +157,42 @@ export function DashboardPage() {
           <>
             <div className="divider" />
             <h3 className="section-title">QC results — today ({kpis.inspections.length} inspections)</h3>
-            <div className="card">
-              <table className="tbl">
-                <thead><tr><th>SKU</th><th>Hub</th><th>Sampling</th><th>% NC</th><th>Result</th><th>State</th></tr></thead>
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table className="tbl" style={{ minWidth: 980 }}>
+                <thead><tr>
+                  <th>SKU</th><th>Hub</th><th>Sampling</th><th>% NC</th><th>Result</th>
+                  <th>Officer accuracy</th><th>Stock condition</th><th>Avail → Bad</th><th>State</th>
+                </tr></thead>
                 <tbody>
-                  {(kpis.inspections as any[]).slice(0, 10).map((ins: any) => (
-                    <tr key={ins.id}>
-                      <td className="skuname">{ins.sku_id}</td>
-                      <td>{ins.hub_id}</td>
-                      <td>{ins.sampling_qty}/{ins.soh}</td>
-                      <td>{Number(ins.nc_pct).toFixed(1)}%</td>
-                      <td><span className={`lab ${ins.decision === 'Accepted' ? 'green' : ins.decision === 'Conditionally Accepted' ? 'orange' : 'red'}`}>{ins.decision}</span></td>
-                      <td><span className="lab grey">{STATE_LABELS[ins.lifecycle_state] ?? ins.lifecycle_state}</span></td>
-                    </tr>
-                  ))}
+                  {(kpis.inspections as any[]).slice(0, 10).map((ins: any) => {
+                    const verification = ins.verifications?.[0]
+                    const statusChange = ins.status_changes?.[0]
+                    return (
+                      <tr key={ins.id}>
+                        <td className="skuname">{ins.sku_id}</td>
+                        <td>{ins.hub_id}</td>
+                        <td>{ins.sampling_qty}/{ins.soh}</td>
+                        <td>{Number(ins.nc_pct).toFixed(1)}%</td>
+                        <td><span className={`lab ${ins.decision === 'Accepted' ? 'green' : ins.decision === 'Conditionally Accepted' ? 'orange' : 'red'}`}>{ins.decision}</span></td>
+                        <td>
+                          {verification
+                            ? <span className={`lab ${VERIF_BAND_LAB[verification.band] ?? 'grey'}`}>{verification.band.replace(/_/g, ' ')} · {verification.compliance_pct}%</span>
+                            : <span className="muted">— not verified</span>}
+                        </td>
+                        <td>
+                          {verification
+                            ? <span className={`lab ${verification.match_flag ? 'green' : 'orange'}`}>{verification.match_flag ? 'Match' : 'Mismatch'}</span>
+                            : <span className="muted">—</span>}
+                        </td>
+                        <td>
+                          {statusChange?.state === 'Approved' && statusChange.qty_changed != null
+                            ? <b style={{ color: 'var(--red)' }}>{statusChange.qty_changed} pcs</b>
+                            : <span className="muted">—</span>}
+                        </td>
+                        <td><span className="lab grey">{STATE_LABELS[ins.lifecycle_state] ?? ins.lifecycle_state}</span></td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
