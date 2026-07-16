@@ -244,3 +244,14 @@ DROP POLICY IF EXISTS "inspection-photos anon update" ON storage.objects;
 CREATE POLICY "inspection-photos anon update"
   ON storage.objects FOR UPDATE TO public
   USING (bucket_id = 'inspection-photos');
+
+-- plan-improvements-v2.md PR0: Step-1 physical checklist + sorted bad qty
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS storage_condition TEXT;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS early_stop        BOOLEAN DEFAULT FALSE;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS early_reason      TEXT;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS color             TEXT;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS texture           TEXT;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS packaging         TEXT;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS seal              TEXT;
+ALTER TABLE inspections ADD COLUMN IF NOT EXISTS cleanliness       TEXT;
+ALTER TABLE status_changes ADD COLUMN IF NOT EXISTS qty_changed    INTEGER;

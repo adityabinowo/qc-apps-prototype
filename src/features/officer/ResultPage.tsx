@@ -1,9 +1,16 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
+import { updateStatusChangeQty } from '../../data/queries'
 import type { DecisionResultInterface } from '../../lib/rules'
 
 export function ResultPage() {
   const { state } = useLocation() as { state?: { inspection: any; decision: DecisionResultInterface; ncPct: number; skuName: string; photoUploadFailures?: number } }
   const navigate = useNavigate()
+  const [sortedBadQty, setSortedBadQty] = useState<number | null>(null)
+  const saveSortedQty = useMutation({
+    mutationFn: () => updateStatusChangeQty(state!.inspection.id, sortedBadQty!),
+  })
 
   if (!state) {
     return (
@@ -36,6 +43,34 @@ export function ResultPage() {
         {!!photoUploadFailures && (
           <div style={{ background: '#FFF0F3', border: '1px solid #ffc7d2', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: '#cc1738', fontWeight: 600 }}>
             ⚠️ {photoUploadFailures} photo{photoUploadFailures > 1 ? 's' : ''} failed to upload. The inspection was saved, but this evidence is missing — notify your supervisor.
+          </div>
+        )}
+        {isCond && (
+          <div style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #e8edf5', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>⚖️ Sorted bad qty (1:1)</div>
+            {saveSortedQty.isSuccess ? (
+              <div style={{ fontSize: 13, color: '#1a7a4a', fontWeight: 600 }}>✓ Saved — {sortedBadQty} pcs recorded as Available → Bad.</div>
+            ) : (
+              <>
+                <label style={{ fontSize: 12, color: '#5a6a84', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                  After sorting good/bad 1:1, how many units are actually bad?
+                </label>
+                <input
+                  type="number" min={0}
+                  value={sortedBadQty ?? ''}
+                  onChange={e => setSortedBadQty(e.target.value === '' ? null : Number(e.target.value))}
+                  placeholder="0"
+                  style={{ width: '100%', border: '1px solid #d8e2ec', borderRadius: 8, padding: '9px 10px', fontSize: 14, boxSizing: 'border-box', marginBottom: 10 }}
+                />
+                <button
+                  onClick={() => saveSortedQty.mutate()}
+                  disabled={sortedBadQty === null || sortedBadQty < 0 || saveSortedQty.isPending}
+                  style={{ width: '100%', background: '#291D80', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (sortedBadQty === null || saveSortedQty.isPending) ? 0.5 : 1 }}
+                >
+                  {saveSortedQty.isPending ? 'Saving…' : 'Save sorted qty'}
+                </button>
+              </>
+            )}
           </div>
         )}
         <div style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #e8edf5', marginBottom: 12 }}>

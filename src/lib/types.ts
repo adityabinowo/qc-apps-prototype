@@ -144,6 +144,14 @@ export interface InspectionInterface {
   proposed_status: StockStatusType | null
   lifecycle_state: LifecycleStateType
   created_at: string
+  storage_condition?: string | null
+  early_stop?: boolean
+  early_reason?: string | null
+  color?: string | null
+  texture?: string | null
+  packaging?: string | null
+  seal?: string | null
+  cleanliness?: string | null
 }
 
 export interface InspectionPhotoInterface {
@@ -166,6 +174,7 @@ export interface StatusChangeInterface {
   submitted_at: string
   decided_by: string | null
   decided_at: string | null
+  qty_changed?: number | null
 }
 
 export interface VerificationInterface {

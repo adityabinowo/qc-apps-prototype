@@ -10,7 +10,10 @@ import type { TaskInterface, StockInterface } from '../../lib/types'
 
 const DEFECT_REASONS = ['Berjamur', 'Lembek (handling)', 'Busuk', 'Expired', 'Kemasan rusak', 'Suhu tidak sesuai', 'Lainnya']
 
-type Step1Data = { productTemp: string; storageCondition: string; earlyStop: boolean; earlyReason: string }
+type Step1Data = {
+  productTemp: string; storageCondition: string; earlyStop: boolean; earlyReason: string
+  color: string; texture: string; packaging: string; seal: string; cleanliness: string
+}
 
 export function InspectionStep2Page() {
   const { state } = useLocation() as { state?: { task: TaskInterface; stock: StockInterface; sampleQty: number; step1: Step1Data } }
@@ -89,6 +92,14 @@ export function InspectionStep2Page() {
         recommended_action: decision.recommendedAction,
         proposed_status: decision.proposesStatusChange ? 'Bad' : null,
         lifecycle_state: 'SUBMITTED',
+        storage_condition: step1.storageCondition,
+        early_stop: earlyStop,
+        early_reason: earlyStop ? step1.earlyReason : null,
+        color: earlyStop ? null : step1.color,
+        texture: earlyStop ? null : step1.texture,
+        packaging: earlyStop ? null : step1.packaging,
+        seal: earlyStop ? null : step1.seal,
+        cleanliness: earlyStop ? null : step1.cleanliness,
       })
 
       for (const url of photoUrls) {
@@ -113,6 +124,9 @@ export function InspectionStep2Page() {
           state: 'Pending',
           source: 'inspection',
           submitted_at: new Date().toISOString(),
+          // Quarantine All -> whole SOH is bad, known immediately. Conditionally Accepted ->
+          // the officer physically sorts good/bad at the 1:1 step, captured later on ResultPage.
+          qty_changed: decision.band === 'Quarantine All' ? stock.soh : null,
         })
       }
 

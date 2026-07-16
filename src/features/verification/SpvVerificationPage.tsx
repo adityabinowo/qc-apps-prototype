@@ -71,6 +71,7 @@ export function SpvVerificationPage() {
           state: 'Pending',
           source: 'verification',
           submitted_at: new Date().toISOString(),
+          qty_changed: defectQty,
         })
       }
       qc.invalidateQueries({ queryKey: ['completed_inspections'] })
