@@ -1,8 +1,9 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { fetchTasksWithOverdue } from '../../data/queries'
+import { fetchTasksWithOverdue, fetchTaskDetail } from '../../data/queries'
+import { decide } from '../../lib/rules'
 import type { TaskInterface } from '../../lib/types'
 
 const PILL_CLS: Record<string, string> = { Pending: '#b0bec5', 'In Progress': '#5579ff', Done: '#43c78f', Overdue: '#ff3d5e' }
@@ -10,6 +11,7 @@ const PILL_CLS: Record<string, string> = { Pending: '#b0bec5', 'In Progress': '#
 export function InboxPage() {
   const { auth } = useAuth()
   const navigate = useNavigate()
+  const [printingId, setPrintingId] = useState<string | null>(null)
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks', auth.hub?.id],
     queryFn: () => fetchTasksWithOverdue(auth.hub?.id),
@@ -17,14 +19,29 @@ export function InboxPage() {
 
   const myTasks = tasks.filter(t => !t.officer_id || t.officer_id === auth.user?.id)
   const [filter, setFilter] = useState('All')
-  const chips = ['All', 'Pending', 'In Progress', 'Overdue']
+  const chips = ['All', 'Pending', 'In Progress', 'Done', 'Overdue']
   const filtered = myTasks.filter(t => filter === 'All' || t.status === filter)
   const active = myTasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length
 
   // Opening a task is just browsing -- status only flips to In Progress when the
-  // officer commits by tapping "Start Inspection" on StockPage.
+  // officer commits by tapping "Start Inspection" on StockPage. Done tasks are
+  // read-only and don't open StockPage at all -- see the View/Print buttons below.
   const handleOpen = (task: TaskInterface & { master_leveling?: { name: string; category: string } }) => {
     navigate('/app/officer/stock', { state: { task } })
+  }
+
+  const handlePrint = async (taskId: string) => {
+    setPrintingId(taskId)
+    try {
+      const task = await fetchTaskDetail(taskId) as any
+      const inspection = task?.inspections?.[0]
+      if (!inspection) return
+      navigate('/app/officer/receipt', {
+        state: { inspection, decision: decide(inspection.nc_pct), ncPct: inspection.nc_pct, skuName: task.master_leveling?.name ?? task.sku_id },
+      })
+    } finally {
+      setPrintingId(null)
+    }
   }
 
   return (
@@ -49,27 +66,47 @@ export function InboxPage() {
       <div style={{ padding: '0 14px 80px' }}>
         {isLoading && <div style={{ textAlign: 'center', padding: 40, color: '#8999b4', fontSize: 13 }}>Loading…</div>}
         {!isLoading && filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#8999b4', fontSize: 13 }}>No tasks</div>}
-        {filtered.map(t => (
-          <div
-            key={t.id}
-            onClick={() => handleOpen(t)}
-            style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(41,29,128,0.07)', border: '1px solid #e8edf5' }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#1c2540' }}>{t.master_leveling?.name ?? t.sku_id}</div>
-              <span style={{ background: t.priority === 'High' ? '#ff3d5e' : t.priority === 'Medium' ? '#ff8c00' : '#8999b4', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '3px 8px' }}>{t.priority}</span>
-            </div>
-            <div style={{ fontSize: 11, color: '#8999b4', margin: '4px 0 8px' }}>{t.level} · {t.coverage_pct}% coverage</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 11, color: '#5a6a84' }}>
-                Due {new Date(t.deadline).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+        {filtered.map(t => {
+          const isDone = t.status === 'Done'
+          return (
+            <div
+              key={t.id}
+              onClick={isDone ? undefined : () => handleOpen(t)}
+              style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 10, cursor: isDone ? 'default' : 'pointer', boxShadow: '0 1px 4px rgba(41,29,128,0.07)', border: '1px solid #e8edf5' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1c2540' }}>{t.master_leveling?.name ?? t.sku_id}</div>
+                <span style={{ background: t.priority === 'High' ? '#ff3d5e' : t.priority === 'Medium' ? '#ff8c00' : '#8999b4', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '3px 8px' }}>{t.priority}</span>
               </div>
-              <span style={{ background: PILL_CLS[t.status] ?? '#b0bec5', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '3px 8px' }}>{t.status}</span>
+              <div style={{ fontSize: 11, color: '#8999b4', margin: '4px 0 8px' }}>{t.level} · {t.coverage_pct}% coverage</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 11, color: '#5a6a84' }}>
+                  Due {new Date(t.deadline).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </div>
+                {isDone ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); navigate(`/app/officer/done/${t.id}`) }}
+                      style={{ border: '1px solid #d8e2ec', background: '#fff', color: '#5a6a84', borderRadius: 8, padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); handlePrint(t.id) }}
+                      disabled={printingId === t.id}
+                      style={{ border: '1px solid #291D80', background: '#fff', color: '#291D80', borderRadius: 8, padding: '4px 10px', fontSize: 10, fontWeight: 700, cursor: 'pointer', opacity: printingId === t.id ? 0.6 : 1 }}
+                    >
+                      {printingId === t.id ? '…' : '🧾 Print'}
+                    </button>
+                  </div>
+                ) : (
+                  <span style={{ background: PILL_CLS[t.status] ?? '#b0bec5', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '3px 8px' }}>{t.status}</span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
-

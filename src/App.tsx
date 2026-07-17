@@ -19,6 +19,7 @@ import { InspectionStep1Page } from './features/officer/InspectionStep1Page'
 import { InspectionStep2Page } from './features/officer/InspectionStep2Page'
 import { ResultPage } from './features/officer/ResultPage'
 import { ReceiptPage } from './features/officer/ReceiptPage'
+import { DonePage } from './features/officer/DonePage'
 
 function ProtectedLayout() {
   const { auth } = useAuth()
@@ -45,6 +46,7 @@ function ProtectedLayout() {
           <Route path="officer/step2" element={<InspectionStep2Page />} />
           <Route path="officer/result" element={<ResultPage />} />
           <Route path="officer/receipt" element={<ReceiptPage />} />
+          <Route path="officer/done/:taskId" element={<DonePage />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Routes>
       </div>
