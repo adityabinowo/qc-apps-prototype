@@ -5,6 +5,7 @@ import { LoginPage } from './features/auth/LoginPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { StatusFlowPage } from './features/statusFlow/StatusFlowPage'
 import { TaskManagementPage } from './features/tasks/TaskManagementPage'
+import { TaskDetailPage } from './features/tasks/TaskDetailPage'
 import { ApprovalQueuePage } from './features/approval/ApprovalQueuePage'
 import { SpvVerificationPage } from './features/verification/SpvVerificationPage'
 import { ChangeHistoryPage } from './features/history/ChangeHistoryPage'
@@ -30,6 +31,7 @@ function ProtectedLayout() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="flow" element={<StatusFlowPage />} />
           <Route path="tasks" element={<TaskManagementPage />} />
+          <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="approval" element={<ApprovalQueuePage />} />
           <Route path="verification" element={<SpvVerificationPage />} />
           <Route path="history" element={<ChangeHistoryPage />} />

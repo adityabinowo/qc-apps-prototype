@@ -265,6 +265,16 @@ export async function fetchTasksWithOverdue(hubId?: string): Promise<(TaskInterf
   }))
 }
 
+export async function fetchTaskDetail(taskId: string): Promise<unknown> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*, master_leveling(name,category), inspections(*, inspection_photos(url,is_defect), verifications(*), status_changes(*))')
+    .eq('id', taskId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 // ── Approvals (rich join) ─────────────────────────────────────────────────────
 
 export async function fetchPendingApprovals(): Promise<unknown[]> {
