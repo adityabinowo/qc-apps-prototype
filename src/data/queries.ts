@@ -316,10 +316,12 @@ export async function fetchCompletedInspections(hubId?: string): Promise<unknown
 
 // ── Dashboard KPIs ────────────────────────────────────────────────────────────
 
-export async function fetchDashboardKpis() {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
+export async function fetchDashboardKpis(period: 'Today' | 'This Week' | 'This Month' = 'This Week') {
+  const since = new Date(); since.setHours(0, 0, 0, 0)
+  if (period === 'This Week') since.setDate(since.getDate() - 6)
+  else if (period === 'This Month') since.setDate(since.getDate() - 29)
   const [inspRes, pendRes, verifRes] = await Promise.all([
-    supabase.from('inspections').select('id,lifecycle_state,hub_id,created_at,nc_pct,decision,sku_id,officer_id,sampling_qty,soh,verifications(band,compliance_pct,match_flag),status_changes(state,qty_changed)').gte('created_at', today.toISOString()),
+    supabase.from('inspections').select('id,lifecycle_state,hub_id,created_at,nc_pct,decision,sku_id,officer_id,sampling_qty,soh,verifications(band,compliance_pct,match_flag),status_changes(state,qty_changed)').gte('created_at', since.toISOString()),
     supabase.from('status_changes').select('id,submitted_at').eq('state', 'Pending'),
     supabase.from('verifications').select('compliance_pct,band'),
   ])
