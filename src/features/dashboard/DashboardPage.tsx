@@ -31,11 +31,11 @@ const VERIF_STEPS = [
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const [period, setPeriod] = useState('This Week')
+  const [period, setPeriod] = useState<'Today' | 'This Week' | 'This Month'>('This Week')
 
-  const { data: kpis, isLoading } = useQuery({
-    queryKey: ['dashboard_kpis'],
-    queryFn: fetchDashboardKpis,
+  const { data: kpis, isLoading, error: kpisError } = useQuery({
+    queryKey: ['dashboard_kpis', period],
+    queryFn: () => fetchDashboardKpis(period),
     staleTime: 0,
     refetchInterval: 5 * 60 * 1000,
   })
@@ -57,12 +57,19 @@ export function DashboardPage() {
             <p className="sub mb0">Real-time inspection progress across hubs · auto-refresh every 5 min</p>
           </div>
           <div className="row">
-            <select className="inp" value={period} onChange={e => setPeriod(e.target.value)}>
+            <select className="inp" value={period} onChange={e => setPeriod(e.target.value as typeof period)}>
               <option>This Week</option><option>Today</option><option>This Month</option>
             </select>
             <button className="btn btn-outline">⬇ Export CSV/Excel</button>
           </div>
         </div>
+
+        {kpisError && (
+          <div className="alert err" style={{ marginBottom: 16 }}>
+            <span className="ic">⚠️</span>
+            <div><b>Couldn't load dashboard data.</b> {kpisError instanceof Error ? kpisError.message : String((kpisError as { message?: string })?.message ?? kpisError)}</div>
+          </div>
+        )}
 
         <div className="kpis">
           <div className="kpi">
@@ -72,7 +79,7 @@ export function DashboardPage() {
           </div>
           <div className="kpi">
             <div className="v">{isLoading ? '—' : kpis?.inspectionsToday ?? 0}</div>
-            <div className="l">Inspections today</div>
+            <div className="l">Inspections {period.toLowerCase()}</div>
             <div className="d" style={{ color: 'var(--secondaryText)' }}>across {hubs.length} hubs</div>
           </div>
           <div className="kpi">
@@ -156,7 +163,7 @@ export function DashboardPage() {
         {kpis && kpis.inspections.length > 0 && (
           <>
             <div className="divider" />
-            <h3 className="section-title">QC results — today ({kpis.inspections.length} inspections)</h3>
+            <h3 className="section-title">QC results — {period.toLowerCase()} ({kpis.inspections.length} inspections)</h3>
             <div className="card" style={{ overflowX: 'auto' }}>
               <table className="tbl" style={{ minWidth: 980 }}>
                 <thead><tr>
