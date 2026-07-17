@@ -33,7 +33,7 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const [period, setPeriod] = useState('This Week')
 
-  const { data: kpis, isLoading } = useQuery({
+  const { data: kpis, isLoading, error: kpisError } = useQuery({
     queryKey: ['dashboard_kpis'],
     queryFn: fetchDashboardKpis,
     staleTime: 0,
@@ -63,6 +63,13 @@ export function DashboardPage() {
             <button className="btn btn-outline">⬇ Export CSV/Excel</button>
           </div>
         </div>
+
+        {kpisError && (
+          <div className="alert err" style={{ marginBottom: 16 }}>
+            <span className="ic">⚠️</span>
+            <div><b>Couldn't load dashboard data.</b> {kpisError instanceof Error ? kpisError.message : String((kpisError as { message?: string })?.message ?? kpisError)}</div>
+          </div>
+        )}
 
         <div className="kpis">
           <div className="kpi">

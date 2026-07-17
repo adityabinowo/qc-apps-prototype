@@ -323,6 +323,9 @@ export async function fetchDashboardKpis() {
     supabase.from('status_changes').select('id,submitted_at').eq('state', 'Pending'),
     supabase.from('verifications').select('compliance_pct,band'),
   ])
+  if (inspRes.error) throw inspRes.error
+  if (pendRes.error) throw pendRes.error
+  if (verifRes.error) throw verifRes.error
   const inspections = inspRes.data ?? []
   const pending = pendRes.data ?? []
   const verifs = verifRes.data ?? []
