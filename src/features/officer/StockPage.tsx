@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { fetchWmsInventoryBySku } from '../../data/queries'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchWmsInventoryBySku, updateTaskStatus } from '../../data/queries'
 import { samplingQty } from '../../lib/rules'
 import type { TaskInterface } from '../../lib/types'
 
@@ -12,6 +12,7 @@ function formatDate(d: string | null | undefined): string {
 export function StockPage() {
   const { state } = useLocation() as { state?: { task: TaskInterface & { master_leveling?: { name: string; category: string } } } }
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const task = state?.task
 
   // Read from wms_inventory (most recent upload) — bypasses the legacy stock table
@@ -98,7 +99,12 @@ export function StockPage() {
         )}
 
         <button
-          onClick={() => navigate('/app/officer/step1', { state: { task, stock: { sku_id: task.sku_id, soh, sloc, expiry_date: expiry, category }, sampleQty } })}
+          onClick={() => {
+            if (task.status === 'Pending') {
+              updateTaskStatus(task.id, 'In Progress').then(() => qc.invalidateQueries({ queryKey: ['tasks'] }))
+            }
+            navigate('/app/officer/step1', { state: { task, stock: { sku_id: task.sku_id, soh, sloc, expiry_date: expiry, category }, sampleQty } })
+          }}
           disabled={soh <= 0}
           style={{ width: '100%', background: '#291D80', color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 15, fontWeight: 700, cursor: soh > 0 ? 'pointer' : 'not-allowed', marginTop: 8, opacity: soh <= 0 ? 0.6 : 1 }}
         >
