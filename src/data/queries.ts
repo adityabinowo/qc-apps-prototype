@@ -306,12 +306,17 @@ export async function fetchAuditLog(): Promise<unknown[]> {
 export async function fetchCompletedInspections(hubId?: string): Promise<unknown[]> {
   let q = supabase
     .from('inspections')
-    .select('*, stock:master_leveling(name,category)')
-    .in('lifecycle_state', ['COMPLETED', 'PENDING_SORT', 'PENDING_APPROVAL'])
+    .select('*, stock:master_leveling(name,category), verifications(id)')
+    // lifecycle_state also gets overwritten to APPROVED/REJECTED by the *separate*
+    // status-change approval flow (see approveStatusChange/rejectStatusChange) --
+    // that's an independent track from "has SPV verified this," so it must stay in
+    // this pool too. Whether it's actually been verified is decided below by
+    // checking for a real verifications row, not by lifecycle_state.
+    .in('lifecycle_state', ['COMPLETED', 'PENDING_SORT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'])
   if (hubId) q = q.eq('hub_id', hubId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
-  return data ?? []
+  return (data ?? []).filter((ins: any) => !ins.verifications || ins.verifications.length === 0)
 }
 
 // ── Dashboard KPIs ────────────────────────────────────────────────────────────

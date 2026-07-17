@@ -47,18 +47,21 @@ export function ResultPage() {
         )}
         {isCond && (
           <div style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #e8edf5', marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>⚖️ Sorted bad qty (1:1)</div>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>⚖️ Sorted bad qty (1:1)</div>
+            <div style={{ fontSize: 12, color: '#8999b4', marginBottom: 10, lineHeight: 1.5 }}>
+              Your {inspection.sampling_qty}-pc sample found <b>{inspection.qty_bad} bad</b> ({ncPct.toFixed(1)}%) — that decided the result above, but it's not the WMS quantity. Now physically sort the <b>full stock on hand ({inspection.soh} pcs)</b> 1:1 to find the actual number of bad units.
+            </div>
             {saveSortedQty.isSuccess ? (
               <div style={{ fontSize: 13, color: '#1a7a4a', fontWeight: 600 }}>✓ Saved — {sortedBadQty} pcs recorded as Available → Bad.</div>
             ) : (
               <>
                 <label style={{ fontSize: 12, color: '#5a6a84', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-                  After sorting good/bad 1:1, how many units are actually bad?
+                  Bad units found in the full {inspection.soh}-pc stock
                 </label>
                 <input
-                  type="number" min={0}
+                  type="number" min={0} max={inspection.soh}
                   value={sortedBadQty ?? ''}
-                  onChange={e => setSortedBadQty(e.target.value === '' ? null : Number(e.target.value))}
+                  onChange={e => setSortedBadQty(e.target.value === '' ? null : Math.min(inspection.soh, Number(e.target.value)))}
                   placeholder="0"
                   style={{ width: '100%', border: '1px solid #d8e2ec', borderRadius: 8, padding: '9px 10px', fontSize: 14, boxSizing: 'border-box', marginBottom: 10 }}
                 />
