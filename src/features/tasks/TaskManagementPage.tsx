@@ -1,5 +1,6 @@
 ﻿import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { Topbar } from '../../components/Topbar'
 import { Modal } from '../../components/Modal'
@@ -72,6 +73,7 @@ function downloadTemplate() {
 
 export function TaskManagementPage() {
   const { auth } = useAuth()
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const hubId = auth.hub?.id
   const bulkFileRef = useRef<HTMLInputElement>(null)
@@ -266,8 +268,12 @@ export function TaskManagementPage() {
               {filtered.map(t => {
                 const isSelectable = t.status === 'Pending' && !t.officer_id
                 return (
-                  <tr key={t.id} style={{ background: selected.has(t.id) ? 'var(--mainFaded)' : undefined }}>
-                    <td>
+                  <tr
+                    key={t.id}
+                    onClick={() => navigate(`/app/tasks/${t.id}`)}
+                    style={{ cursor: 'pointer', background: selected.has(t.id) ? 'var(--mainFaded)' : undefined }}
+                  >
+                    <td onClick={e => e.stopPropagation()}>
                       {isSelectable && (
                         <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleRow(t.id)} />
                       )}
